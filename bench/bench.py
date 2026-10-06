@@ -72,7 +72,10 @@ def bench_ops(img, iters: int, warmup: int) -> dict:
     small = cv2.resize(img, (640, 480))
     gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, 50, 150)
+    # Mirrors vision.py: median-proportional Canny thresholds.
+    med = float(np.median(gray[::8, ::8]))
+    lo, hi = max(1, int(0.66 * med)), max(2, int(1.33 * med))
+    edges = cv2.Canny(blurred, lo, hi)
     bg = cv2.blur(gray, (25, 25))
     tophat = cv2.subtract(bg, gray)
 
@@ -81,7 +84,7 @@ def bench_ops(img, iters: int, warmup: int) -> dict:
         "cvtColor": timed(lambda: cv2.cvtColor(small, cv2.COLOR_BGR2GRAY), iters, warmup),
         "GaussianBlur": timed(lambda: cv2.GaussianBlur(gray, (5, 5), 0), iters, warmup),
         "blur_box25": timed(lambda: cv2.blur(gray, (25, 25)), iters, warmup),
-        "Canny": timed(lambda: cv2.Canny(blurred, 50, 150), iters, warmup),
+        "Canny": timed(lambda: cv2.Canny(blurred, lo, hi), iters, warmup),
         "subtract": timed(lambda: cv2.subtract(bg, gray), iters, warmup),
         "threshold": timed(lambda: cv2.threshold(tophat, 18, 255, cv2.THRESH_BINARY),
                           iters, warmup),
@@ -118,7 +121,8 @@ def full_pipeline(img, iters: int, warmup: int) -> float:
         small = cv2.resize(img, (640, 480))
         gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
         b = cv2.GaussianBlur(gray, (5, 5), 0)
-        e = cv2.Canny(b, 50, 150)
+        m = float(np.median(gray[::8, ::8]))
+        e = cv2.Canny(b, max(1, int(0.66 * m)), max(2, int(1.33 * m)))
         bg = cv2.blur(gray, (25, 25))
         tophat = cv2.subtract(bg, gray)
         _, mask = cv2.threshold(tophat, 18, 255, cv2.THRESH_BINARY)

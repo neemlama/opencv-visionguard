@@ -7,10 +7,10 @@ Format with `python bench\show.py`.
 
 | arm | instance | library | OpenCV | fps | ms/frame |
 |---|---|---|---|---|---|
-| **A** | `c8g.medium` (Graviton4) | **COOL** | 4.14.0-pre | **905.81** | **1.10** |
-| **B** | `c8g.medium` (Graviton4) | DIY pip | 4.14.0 | **708.98** | 1.41 |
+| **A** | `c8g.medium` (Graviton4) | **COOL** | 4.14.0-pre | **893.42** | **1.12** |
+| **B** | `c8g.medium` (Graviton4) | DIY pip | 4.14.0 | **702.60** | 1.42 |
 
-**A/B = 1.28x library-only** — same instance type, same OS, same major.minor.
+**A/B = 1.27x library-only** — same instance type, same OS, same major.minor.
 This is the number that satisfies the COOL Award requirement that COOL executes
 the claimed core workload on AWS Graviton.
 
@@ -21,17 +21,17 @@ A 226.73 vs B 202.02 = **1.12x**.
 
 | op | COOL | DIY | COOL faster by |
 |---|---|---|---|
-| `Canny` | 0.1898 | 0.6040 | **3.18x** |
-| `GaussianBlur` | 0.0999 | 0.1095 | 1.10x |
-| `dilate` | 0.0497 | 0.0527 | 1.06x |
-| `findContours` | 0.0384 | 0.0387 | 1.01x |
-| `resize` | 0.0311 | 0.0315 | 1.01x |
-| `cvtColor` | 0.0904 | 0.0912 | 1.01x |
-| `subtract` | 0.0167 | 0.0167 | 1.00x |
-| `blur_box25` | 0.3472 | 0.3438 | 0.99x |
-| `morphOpen` | 0.1016 | 0.0966 | 0.95x |
-| `threshold` | 0.0141 | 0.0132 | 0.94x |
-| `adaptiveThreshold` (legacy, unused) | 2.7461 | 1.7140 | **0.62x** |
+| `Canny` | 0.1893 | 0.5964 | **3.15x** |
+| `GaussianBlur` | 0.0997 | 0.1097 | 1.10x |
+| `resize` | 0.0312 | 0.0343 | 1.10x |
+| `dilate` | 0.0498 | 0.0529 | 1.06x |
+| `cvtColor` | 0.0902 | 0.0911 | 1.01x |
+| `subtract` | 0.0167 | 0.0169 | 1.01x |
+| `blur_box25` | 0.3439 | 0.3474 | 0.99x |
+| `findContours` | 0.0384 | 0.0384 | 1.00x |
+| `morphOpen` | 0.0962 | 0.0962 | 1.00x |
+| `threshold` | 0.0143 | 0.0157 | 0.91x |
+| `adaptiveThreshold` (legacy, unused) | 1.7194 | 1.0836 | **0.63x** |
 
 ## How this was found: a measurement-driven optimisation
 
@@ -76,6 +76,13 @@ Two outcomes, both verified:
 
 This is the most defensible part of the COOL submission: the speedup came from
 reading the profiler, not from tuning thresholds.
+
+> **Final numbers after the evaluation-driven changes** (median-proportional
+> Canny thresholds + subsampled median). Re-verified on AWS:
+> **A COOL 893.42 fps (1.12 ms/frame), B DIY 702.60 fps (1.42 ms/frame),
+> A/B = 1.27x**; per-op `Canny` 3.15x, `GaussianBlur` 1.10x,
+> `adaptiveThreshold` 0.63x. Essentially unchanged — those fixes were
+> performance-neutral. See `docs/EVALUATION.md`.
 
 ## Honest caveats
 

@@ -1,0 +1,587 @@
+{
+  "opencv_version": "5.0.0",
+  "baseline": {
+    "rows": [
+      {
+        "file": "weld_clean.jpg",
+        "expected_verdict": "pass",
+        "got_verdict": "pass",
+        "verdict_match": true,
+        "expected_class": "clean",
+        "got_class": "clean",
+        "class_match": true,
+        "defect_score": 0.015,
+        "dark_blobs": 0,
+        "blur_variance": 1082.81,
+        "glare_ratio": 0.0,
+        "trace_steps": 1
+      },
+      {
+        "file": "weld_defect.jpg",
+        "expected_verdict": "human-review",
+        "got_verdict": "human-review",
+        "verdict_match": true,
+        "expected_class": "defect",
+        "got_class": "defect",
+        "class_match": true,
+        "defect_score": 0.311,
+        "dark_blobs": 1,
+        "blur_variance": 1166.37,
+        "glare_ratio": 0.0,
+        "trace_steps": 2
+      },
+      {
+        "file": "weld_damage.jpg",
+        "expected_verdict": "escalate-human",
+        "got_verdict": "escalate-human",
+        "verdict_match": true,
+        "expected_class": "defect",
+        "got_class": "defect",
+        "class_match": true,
+        "defect_score": 1.0,
+        "dark_blobs": 6,
+        "blur_variance": 1545.16,
+        "glare_ratio": 0.0,
+        "trace_steps": 1
+      },
+      {
+        "file": "weld_blurry.jpg",
+        "expected_verdict": "re-shoot",
+        "got_verdict": "re-shoot",
+        "verdict_match": true,
+        "expected_class": "unusable",
+        "got_class": "unusable",
+        "class_match": true,
+        "defect_score": 0.0,
+        "dark_blobs": 0,
+        "blur_variance": 0.29,
+        "glare_ratio": 0.0,
+        "trace_steps": 1
+      },
+      {
+        "file": "weld_glare.jpg",
+        "expected_verdict": "re-shoot-angle",
+        "got_verdict": "re-shoot-angle",
+        "verdict_match": true,
+        "expected_class": "unusable",
+        "got_class": "unusable",
+        "class_match": true,
+        "defect_score": 0.0,
+        "dark_blobs": 0,
+        "blur_variance": 332.24,
+        "glare_ratio": 0.2301,
+        "trace_steps": 1
+      }
+    ],
+    "confusion": {
+      "clean": {
+        "clean": 1,
+        "defect": 0,
+        "unusable": 0
+      },
+      "defect": {
+        "clean": 0,
+        "defect": 2,
+        "unusable": 0
+      },
+      "unusable": {
+        "clean": 0,
+        "defect": 0,
+        "unusable": 2
+      }
+    },
+    "metrics": {
+      "clean": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 1
+      },
+      "defect": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 2
+      },
+      "unusable": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 2
+      },
+      "accuracy": 1.0,
+      "n": 5
+    }
+  },
+  "perturbation_sweep": [
+    {
+      "perturbation": "none",
+      "correct": 5,
+      "total": 5,
+      "accuracy": 1.0,
+      "flips": [],
+      "per_image": [
+        {
+          "file": "weld_clean.jpg",
+          "expected_class": "clean",
+          "got_class": "clean",
+          "ok": true,
+          "verdict": "pass",
+          "defect_score": 0.015
+        },
+        {
+          "file": "weld_defect.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "human-review",
+          "defect_score": 0.311
+        },
+        {
+          "file": "weld_damage.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "escalate-human",
+          "defect_score": 1.0
+        },
+        {
+          "file": "weld_blurry.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot",
+          "defect_score": 0.0
+        },
+        {
+          "file": "weld_glare.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot-angle",
+          "defect_score": 0.0
+        }
+      ]
+    },
+    {
+      "perturbation": "dark_-30",
+      "correct": 4,
+      "total": 5,
+      "accuracy": 0.8,
+      "flips": [
+        "weld_glare.jpg: unusable->clean (pass)"
+      ],
+      "per_image": [
+        {
+          "file": "weld_clean.jpg",
+          "expected_class": "clean",
+          "got_class": "clean",
+          "ok": true,
+          "verdict": "pass",
+          "defect_score": 0.015
+        },
+        {
+          "file": "weld_defect.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "human-review",
+          "defect_score": 0.311
+        },
+        {
+          "file": "weld_damage.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "escalate-human",
+          "defect_score": 1.0
+        },
+        {
+          "file": "weld_blurry.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot",
+          "defect_score": 0.0
+        },
+        {
+          "file": "weld_glare.jpg",
+          "expected_class": "unusable",
+          "got_class": "clean",
+          "ok": false,
+          "verdict": "pass",
+          "defect_score": 0.0
+        }
+      ]
+    },
+    {
+      "perturbation": "bright_+30",
+      "correct": 5,
+      "total": 5,
+      "accuracy": 1.0,
+      "flips": [],
+      "per_image": [
+        {
+          "file": "weld_clean.jpg",
+          "expected_class": "clean",
+          "got_class": "clean",
+          "ok": true,
+          "verdict": "pass",
+          "defect_score": 0.015
+        },
+        {
+          "file": "weld_defect.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "human-review",
+          "defect_score": 0.299
+        },
+        {
+          "file": "weld_damage.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "escalate-human",
+          "defect_score": 1.0
+        },
+        {
+          "file": "weld_blurry.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot",
+          "defect_score": 0.0
+        },
+        {
+          "file": "weld_glare.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot-angle",
+          "defect_score": 0.0
+        }
+      ]
+    },
+    {
+      "perturbation": "noise_sigma10",
+      "correct": 4,
+      "total": 5,
+      "accuracy": 0.8,
+      "flips": [
+        "weld_blurry.jpg: unusable->clean (pass)"
+      ],
+      "per_image": [
+        {
+          "file": "weld_clean.jpg",
+          "expected_class": "clean",
+          "got_class": "clean",
+          "ok": true,
+          "verdict": "pass",
+          "defect_score": 0.015
+        },
+        {
+          "file": "weld_defect.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "human-review",
+          "defect_score": 0.307
+        },
+        {
+          "file": "weld_damage.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "escalate-human",
+          "defect_score": 1.0
+        },
+        {
+          "file": "weld_blurry.jpg",
+          "expected_class": "unusable",
+          "got_class": "clean",
+          "ok": false,
+          "verdict": "pass",
+          "defect_score": 0.0
+        },
+        {
+          "file": "weld_glare.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot-angle",
+          "defect_score": 0.0
+        }
+      ]
+    },
+    {
+      "perturbation": "noise_sigma25",
+      "correct": 4,
+      "total": 5,
+      "accuracy": 0.8,
+      "flips": [
+        "weld_blurry.jpg: unusable->clean (pass)"
+      ],
+      "per_image": [
+        {
+          "file": "weld_clean.jpg",
+          "expected_class": "clean",
+          "got_class": "clean",
+          "ok": true,
+          "verdict": "pass",
+          "defect_score": 0.015
+        },
+        {
+          "file": "weld_defect.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "human-review",
+          "defect_score": 0.311
+        },
+        {
+          "file": "weld_damage.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "escalate-human",
+          "defect_score": 1.0
+        },
+        {
+          "file": "weld_blurry.jpg",
+          "expected_class": "unusable",
+          "got_class": "clean",
+          "ok": false,
+          "verdict": "pass",
+          "defect_score": 0.0
+        },
+        {
+          "file": "weld_glare.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot-angle",
+          "defect_score": 0.0
+        }
+      ]
+    },
+    {
+      "perturbation": "jpeg_q20",
+      "correct": 5,
+      "total": 5,
+      "accuracy": 1.0,
+      "flips": [],
+      "per_image": [
+        {
+          "file": "weld_clean.jpg",
+          "expected_class": "clean",
+          "got_class": "clean",
+          "ok": true,
+          "verdict": "pass",
+          "defect_score": 0.015
+        },
+        {
+          "file": "weld_defect.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "human-review",
+          "defect_score": 0.311
+        },
+        {
+          "file": "weld_damage.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "escalate-human",
+          "defect_score": 1.0
+        },
+        {
+          "file": "weld_blurry.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot",
+          "defect_score": 0.0
+        },
+        {
+          "file": "weld_glare.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot-angle",
+          "defect_score": 0.0
+        }
+      ]
+    },
+    {
+      "perturbation": "downscale_320",
+      "correct": 2,
+      "total": 5,
+      "accuracy": 0.4,
+      "flips": [
+        "weld_clean.jpg: clean->unusable (re-shoot)",
+        "weld_defect.jpg: defect->unusable (re-shoot)",
+        "weld_damage.jpg: defect->unusable (re-shoot)"
+      ],
+      "per_image": [
+        {
+          "file": "weld_clean.jpg",
+          "expected_class": "clean",
+          "got_class": "unusable",
+          "ok": false,
+          "verdict": "re-shoot",
+          "defect_score": 0.0
+        },
+        {
+          "file": "weld_defect.jpg",
+          "expected_class": "defect",
+          "got_class": "unusable",
+          "ok": false,
+          "verdict": "re-shoot",
+          "defect_score": 0.294
+        },
+        {
+          "file": "weld_damage.jpg",
+          "expected_class": "defect",
+          "got_class": "unusable",
+          "ok": false,
+          "verdict": "re-shoot",
+          "defect_score": 0.976
+        },
+        {
+          "file": "weld_blurry.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot",
+          "defect_score": 0.0
+        },
+        {
+          "file": "weld_glare.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot",
+          "defect_score": 0.0
+        }
+      ]
+    },
+    {
+      "perturbation": "rotate_5deg",
+      "correct": 5,
+      "total": 5,
+      "accuracy": 1.0,
+      "flips": [],
+      "per_image": [
+        {
+          "file": "weld_clean.jpg",
+          "expected_class": "clean",
+          "got_class": "clean",
+          "ok": true,
+          "verdict": "pass",
+          "defect_score": 0.015
+        },
+        {
+          "file": "weld_defect.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "human-review",
+          "defect_score": 0.299
+        },
+        {
+          "file": "weld_damage.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "escalate-human",
+          "defect_score": 0.978
+        },
+        {
+          "file": "weld_blurry.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot",
+          "defect_score": 0.0
+        },
+        {
+          "file": "weld_glare.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot",
+          "defect_score": 0.0
+        }
+      ]
+    },
+    {
+      "perturbation": "contrast_0.6",
+      "correct": 4,
+      "total": 5,
+      "accuracy": 0.8,
+      "flips": [
+        "weld_glare.jpg: unusable->clean (pass)"
+      ],
+      "per_image": [
+        {
+          "file": "weld_clean.jpg",
+          "expected_class": "clean",
+          "got_class": "clean",
+          "ok": true,
+          "verdict": "pass",
+          "defect_score": 0.0
+        },
+        {
+          "file": "weld_defect.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "human-review",
+          "defect_score": 0.293
+        },
+        {
+          "file": "weld_damage.jpg",
+          "expected_class": "defect",
+          "got_class": "defect",
+          "ok": true,
+          "verdict": "escalate-human",
+          "defect_score": 1.0
+        },
+        {
+          "file": "weld_blurry.jpg",
+          "expected_class": "unusable",
+          "got_class": "unusable",
+          "ok": true,
+          "verdict": "re-shoot",
+          "defect_score": 0.0
+        },
+        {
+          "file": "weld_glare.jpg",
+          "expected_class": "unusable",
+          "got_class": "clean",
+          "ok": false,
+          "verdict": "pass",
+          "defect_score": 0.0
+        }
+      ]
+    }
+  ],
+  "latency_local": {
+    "n": 200,
+    "p50_ms": 11.715,
+    "p95_ms": 19.674,
+    "p99_ms": 26.302,
+    "mean_ms": 12.351,
+    "fps_equivalent": 81.0,
+    "platform": "5.0.0"
+  },
+  "known_limitations": [
+    "Thresholds are hand-tuned on 5 synthetic images; no labelled real-weld dataset, so scores are a triage signal rather than calibrated probability.",
+    "Pits below the 400px area floor are invisible to the dark-blob detector.",
+    "No geometric tolerance model: the system reports 'a dark blob exists', not 'this weld violates ISO 17663 dimension X'.",
+    "The sample set is single-scenario (flat gray plate, one lighting model). Real weld beads vary in colour, texture and spatter.",
+    "Latency figures are single-process, warm-cache, local x86; AWS figures live in docs/BENCHMARK-RESULTS.md."
+  ]
+}

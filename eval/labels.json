@@ -1,0 +1,51 @@
+{
+  "_comment": "Ground truth for the synthetic evaluation set. Regenerate the images with `python -m backend.app.make_samples`; the generator is seeded so they stay byte-identical.",
+  "labels": [
+    {
+      "file": "weld_clean.jpg",
+      "expected_verdict": "pass",
+      "expected_defect": false,
+      "usable_image": true,
+      "notes": "Nominal weld, no porosity. Blur/glare within limits."
+    },
+    {
+      "file": "weld_defect.jpg",
+      "expected_verdict": "human-review",
+      "expected_defect": true,
+      "usable_image": true,
+      "notes": "Single pit in the bead plus small surface pits. Deliberately ambiguous score so the agent takes the zoom-then-review path rather than a confident escalation."
+    },
+    {
+      "file": "weld_damage.jpg",
+      "expected_verdict": "escalate-human",
+      "expected_defect": true,
+      "usable_image": true,
+      "notes": "Severe porosity and undercut. Must escalate to a human work order."
+    },
+    {
+      "file": "weld_blurry.jpg",
+      "expected_verdict": "re-shoot",
+      "expected_defect": false,
+      "usable_image": false,
+      "notes": "Defocused. usable_image=false: the image is not fit for defect judgement at all, so no defect claim is possible and the correct action is to ask for a re-shoot."
+    },
+    {
+      "file": "weld_glare.jpg",
+      "expected_verdict": "re-shoot-angle",
+      "expected_defect": false,
+      "usable_image": false,
+      "notes": "Specular highlight obscures the surface. usable_image=false: correct action is to change capture angle before any defect judgement."
+    }
+  ],
+  "perturbations": [
+    {"name": "none", "kind": "identity"},
+    {"name": "dark_-30", "kind": "brightness", "value": 0.70},
+    {"name": "bright_+30", "kind": "brightness", "value": 1.30},
+    {"name": "noise_sigma10", "kind": "noise", "value": 10},
+    {"name": "noise_sigma25", "kind": "noise", "value": 25},
+    {"name": "jpeg_q20", "kind": "jpeg", "value": 20},
+    {"name": "downscale_320", "kind": "resize", "value": 0.5},
+    {"name": "rotate_5deg", "kind": "rotate", "value": 5},
+    {"name": "contrast_0.6", "kind": "contrast", "value": 0.6}
+  ]
+}
