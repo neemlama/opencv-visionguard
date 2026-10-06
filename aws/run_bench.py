@@ -37,23 +37,51 @@ OUT_DIR = Path(__file__).resolve().parents[1] / "bench" / "results"
 BENCH_LOCAL = Path(__file__).resolve().parents[1] / "bench" / "bench.py"
 SAMPLES_LOCAL = Path(__file__).resolve().parents[1] / "backend" / "app" / "make_samples.py"
 
-# Ubuntu 24.04 already ships Python 3.12, so the DIY arm needs no deadsnakes.
+# COOL install layout differs by AMI generation. The Graviton2 image
+# (ami-03175684e1b021dda) uses /opt/opencv_install/{lib,lib/python3.12/site-packages}
+# and has NO /opt/cool at all; the Graviton4 listing documents /opt/cool. Detect at
+# runtime instead of hardcoding either path.
+#
+# The env exports MUST be in the same command as the python invocation: relying on
+# exports carrying between separate AWS-RunShellScript command entries failed in
+# practice - python3.12 ran fine but cv2 was missing.
+COOL_ENV = (
+    "if [ -d /opt/opencv_install ]; then "
+    "  export LD_LIBRARY_PATH=/opt/opencv_install/lib:$LD_LIBRARY_PATH; "
+    "  export PYTHONPATH=/opt/opencv_install/lib/python3.12/site-packages; "
+    "elif [ -d /opt/cool ]; then "
+    "  export LD_LIBRARY_PATH=/opt/cool/cpp_sdk/lib:$LD_LIBRARY_PATH; "
+    "  export PYTHONPATH=/opt/cool/python_3.12/site-packages/; "
+    "else echo COOL_LAYOUT_NOT_FOUND; fi; "
+)
+
+
+def diy_install_cmd(opencv_version=""):
+    """DIY control install.
+
+    `opencv_version` pins the pip wheel so the A-vs-B delta is attributable to
+    COOL alone. The COOL Graviton2 AMI ships OpenCV 4.12, so comparing it against
+    an unpinned (5.x) DIY build would confound the optimisation with a major
+    version change.
+    """
+    spec = f"opencv-python=={opencv_version}" if opencv_version else "opencv-python"
+    return (
+        "export DEBIAN_FRONTEND=noninteractive; "
+        # Subshell-scoped redirect: a bare `exec >` keeps redirecting for the
+        # whole SSM script and swallows the result markers printed later.
+        "( apt-get update -qq && "
+        "  apt-get install -y -qq python3-venv python3-pip libgl1 libglib2.0-0t64 && "
+        "  python3 -m venv /opt/benchenv && "
+        "  /opt/benchenv/bin/pip install -q --upgrade pip && "
+        f"  /opt/benchenv/bin/pip install -q {spec} numpy "
+        ") > /tmp/install.log 2>&1 || { echo INSTALL_FAILED; tail -20 /tmp/install.log; }; "
+        "/opt/benchenv/bin/python -c \"import cv2; print('opencv', cv2.__version__)\""
+    )
+
 # libgl1 + libglib are required by opencv-python on a headless host; without
 # them `import cv2` dies with "libGL.so.1: cannot open shared object file".
-# This deliberately installs the full opencv-python (not -headless) so the
-# control matches AWS's own published DIY baseline.
-INSTALL_DIY = (
-    "export DEBIAN_FRONTEND=noninteractive; "
-    # Subshell-scoped redirect: a bare `exec >` would keep redirecting for the
-    # whole SSM script and swallow the result markers printed later.
-    "( apt-get update -qq && "
-    "  apt-get install -y -qq python3-venv python3-pip libgl1 libglib2.0-0t64 && "
-    "  python3 -m venv /opt/benchenv && "
-    "  /opt/benchenv/bin/pip install -q --upgrade pip && "
-    "  /opt/benchenv/bin/pip install -q opencv-python numpy "
-    ") > /tmp/install.log 2>&1 || { echo INSTALL_FAILED; tail -20 /tmp/install.log; }; "
-    "/opt/benchenv/bin/python -c \"import cv2; print('opencv', cv2.__version__)\""
-)
+# The full opencv-python (not -headless) is installed deliberately so the control
+# matches AWS's own published DIY baseline.
 
 
 def parse_arm(spec):
@@ -141,7 +169,7 @@ def ensure_ssm_role(iam, name):
     return name
 
 
-def launch(ec2, arm, profile_arn, subnet=None):
+def launch(ec2, arm, profile_arn, subnet=None, volume_size=None):
     kwargs = dict(
         ImageId=arm["ami"],
         InstanceType=arm["instance_type"],
@@ -160,14 +188,20 @@ def launch(ec2, arm, profile_arn, subnet=None):
                 ],
             }
         ],
-        BlockDeviceMappings=[
-            {
-                "DeviceName": "/dev/sda1",
-                "Ebs": {"VolumeSize": 20, "VolumeType": "gp3", "DeleteOnTermination": True},
-            }
-        ],
         MetadataOptions={"HttpTokens": "required"},
     )
+    # Only override the root volume when asked. A hardcoded 20GB broke the COOL
+    # arm: its AMI snapshot is 40GB and EC2 rejects a smaller volume with
+    # InvalidBlockDeviceMapping. Omitting the mapping uses the AMI's own sizing,
+    # and the root volume is DeleteOnTermination by default.
+    if volume_size:
+        kwargs["BlockDeviceMappings"] = [
+            {
+                "DeviceName": "/dev/sda1",
+                "Ebs": {"VolumeSize": volume_size, "VolumeType": "gp3",
+                        "DeleteOnTermination": True},
+            }
+        ]
     if subnet:
         kwargs["SubnetId"] = subnet["SubnetId"]
     resp = ec2.run_instances(**kwargs)
@@ -178,12 +212,12 @@ def launch(ec2, arm, profile_arn, subnet=None):
     return iid
 
 
-def launch_with_fallback(ec2, arm, profile_arn, candidates):
+def launch_with_fallback(ec2, arm, profile_arn, candidates, volume_size=None):
     """Walk candidate AZs until one actually offers the instance type."""
     last = None
     for cand in candidates:
         try:
-            return launch(ec2, arm, profile_arn, cand)
+            return launch(ec2, arm, profile_arn, cand, volume_size)
         except ClientError as e:
             last = e
             if e.response["Error"]["Code"] in ("Unsupported", "InvalidParameterValue"):
@@ -239,12 +273,13 @@ def send_and_wait(ssm, iid, commands, timeout=1200):
     raise SystemExit(f"command timed out on {iid}")
 
 
-def run_arm(region, arm, profile_arn, candidates, usd_per_hour):
+def run_arm(region, arm, profile_arn, candidates, usd_per_hour, volume_size=None,
+            opencv_version=""):
     ec2 = boto3.client("ec2", region_name=region)
     ssm = boto3.client("ssm", region_name=region)
     iid = None
     try:
-        iid = launch_with_fallback(ec2, arm, profile_arn, candidates)
+        iid = launch_with_fallback(ec2, arm, profile_arn, candidates, volume_size)
         if not wait_for_ssm(ssm, iid, arm["name"]):
             print(f"[{arm['name']}] SSM never registered (check subnet egress)", file=sys.stderr)
             return None
@@ -260,23 +295,37 @@ def run_arm(region, arm, profile_arn, candidates, usd_per_hour):
         ]
         if arm["cool"]:
             cmds.append(
-                'export LD_LIBRARY_PATH="/opt/cool/cpp_sdk/lib:$LD_LIBRARY_PATH"; '
-                'export PYTHONPATH="/opt/cool/python_3.12/site-packages/"'
+                "echo '--- COOL layout ---'; "
+                "ls -d /opt/opencv_install /opt/cool /opt/kleidicv 2>&1; "
+                "which python3.12; python3.12 -V"
+            )
+            cmds.append(
+                COOL_ENV + "python3.12 -c \"import cv2; "
+                "print('COOL cv2', cv2.__version__)\" > /tmp/coolcheck.log 2>&1; "
+                "echo COOLCHECK_EXIT=$?; cat /tmp/coolcheck.log"
             )
             runner = f"python3.12 {BENCH_REMOTE}"
             gen_runner = f"python3.12 /tmp/make_samples.py {REMOTE_SAMPLES}"
+            prefix = COOL_ENV
         else:
-            cmds.append(INSTALL_DIY)
+            cmds.append(diy_install_cmd(opencv_version))
             runner = f"/opt/benchenv/bin/python {BENCH_REMOTE}"
             gen_runner = f"/opt/benchenv/bin/python /tmp/make_samples.py {REMOTE_SAMPLES}"
+            prefix = ""
         cmds.append(f"mkdir -p {REMOTE_SAMPLES}")
-        cmds.append(f"{gen_runner}")
-        cmds.append(f"{runner} --label {arm['name']} --instance-type {arm['instance_type']} "
-                    f"--samples {REMOTE_SAMPLES} --usd-per-hour {usd_per_hour} "
-                    f"--out /tmp/bench_result.json")
+        cmds.append(f"{prefix}{gen_runner} > /tmp/gen.log 2>&1; echo GEN_EXIT=$?")
+        # Capture the workload exit code explicitly: a bare `cat` at the end would
+        # return 0 and make SSM report Success even when the benchmark failed.
+        cmds.append(
+            f"{prefix}{runner} --label {arm['name']} --instance-type {arm['instance_type']} "
+            f"--samples {REMOTE_SAMPLES} --usd-per-hour {usd_per_hour} "
+            f"--out /tmp/bench_result.json > /tmp/bench_stdout.log 2>&1; echo BENCH_EXIT=$?"
+        )
         cmds.append("echo __BENCH_JSON_BEGIN__")
-        cmds.append("cat /tmp/bench_result.json")
+        cmds.append("cat /tmp/bench_result.json 2>/dev/null || echo NO_RESULT_FILE")
         cmds.append("echo __BENCH_JSON_END__")
+        cmds.append("echo '--- gen.log ---'; tail -5 /tmp/gen.log")
+        cmds.append("echo '--- bench stdout ---'; tail -25 /tmp/bench_stdout.log")
 
         st, out, err = send_and_wait(ssm, iid, cmds)
         if st != "Success":
@@ -289,10 +338,16 @@ def run_arm(region, arm, profile_arn, candidates, usd_per_hour):
             print(f"[{arm['name']}] result markers missing:\n{out[-1500:]}", file=sys.stderr)
             return None
         blob = out.split("__BENCH_JSON_BEGIN__")[1].split("__BENCH_JSON_END__")[0]
+        if "NO_RESULT_FILE" in blob or not blob.strip():
+            print(f"[{arm['name']}] benchmark produced no result file.\n"
+                  f"--- remote output ---\n{out[-2500:]}\n--- stderr ---\n{err[-1500:]}",
+                  file=sys.stderr)
+            return None
         try:
             return json.loads(blob.strip())
         except json.JSONDecodeError as e:
-            print(f"[{arm['name']}] bad result JSON ({e}):\n{blob[:800]}", file=sys.stderr)
+            print(f"[{arm['name']}] bad result JSON ({e}):\n{blob[:800]}\n"
+                  f"--- remote output ---\n{out[-2000:]}", file=sys.stderr)
             return None
     finally:
         if iid:
@@ -330,6 +385,19 @@ def main():
     ap.add_argument("--usd-per-hour", type=float, default=0.0)
     ap.add_argument("--subnet-id", default="")
     ap.add_argument("--profile", default="forgesight-bench-ssm")
+    ap.add_argument(
+        "--volume-size",
+        type=int,
+        default=0,
+        help="override root volume GB (0 = use the AMI's own sizing)",
+    )
+    ap.add_argument(
+        "--opencv-version",
+        default="",
+        help="pin the DIY arms' opencv-python version, e.g. 4.12.0.88. Match the "
+             "COOL arm's version so the A-vs-B delta is the library, not a "
+             "major-version change.",
+    )
     args = ap.parse_args()
 
     arms = [parse_arm(s) for s in args.arm]
@@ -350,7 +418,17 @@ def main():
 
     results = []
     for arm in arms:
-        results.append(run_arm(region, arm, profile_arn, candidates, args.usd_per_hour))
+        results.append(
+            run_arm(
+                region,
+                arm,
+                profile_arn,
+                candidates,
+                args.usd_per_hour,
+                args.volume_size,
+                args.opencv_version,
+            )
+        )
     results = [r for r in results if r]
 
     if not results:

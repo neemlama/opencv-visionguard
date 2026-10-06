@@ -1,107 +1,144 @@
 # Benchmark Results — us-east-1, 2026-10-06
 
-Real measurements on AWS. Reproduce with the commands in §4. Raw JSON in
-`bench/results/comparison-us-east-1.json`.
+Real measurements on AWS. Raw JSON: `bench/results/comparison-us-east-1.json`.
+Reproduce: §6. Format with `python bench\show.py`.
 
 ## Method
 
-Workload = the ForgeSight inspection path, on the 5 seeded sample images:
+Workload = the ForgeSight inspection path on the 5 seeded sample images:
 `resize -> cvtColor -> GaussianBlur -> Canny -> adaptiveThreshold -> morphologyEx
 OPEN -> findContours x2`.
 
-Timing uses the **median** of 30 iterations after 5 discarded warmup iterations,
-so one scheduling hiccup on a shared instance cannot deflate a number.
-`adaptiveThreshold` dominates at ~62% of pipeline cost, which matters for §3.
+- **Median** of 30 iterations after 5 discarded warmup iterations.
+- Inputs generated **on each instance** by a seeded generator (`SEED=20261006`),
+  verified byte-identical. Unseeded noise would have made each arm measure
+  different images and voided the comparison.
+- **All three arms pinned to OpenCV 4.12.0** so the A-vs-B delta is the library,
+  not a major-version change. See §5.
 
-Inputs are **generated on each instance** by a fixed-seed generator
-(`SEED = 20261006`), verified byte-identical across regenerations. This was a
-real bug: the generator originally used unseeded `np.random`, so each arm would
-have benchmarked *different images* and the comparison would have been
-meaningless.
+## 1. Results (c6g.large / c6i.large, 4 vCPU each)
 
-## 1. Measured results
-
-| arm | instance | arch | build | OpenCV | fps | ms/frame |
+| arm | instance | arch | library | OpenCV | fps | ms/frame |
 |---|---|---|---|---|---|---|
-| B | `t4g.small` | aarch64 | DIY pip | 5.0.0 | **212.70** | 4.70 |
-| C | `t3.small` | x86_64 (Xeon Platinum 8259CL) | DIY pip | 5.0.0 | **194.39** | 5.14 |
+| A | `c6g.large` | aarch64 | **COOL** | 4.12.0 | 226.73 | 4.41 |
+| B | `c6g.large` | aarch64 | DIY pip | 4.12.0 | 202.02 | 4.95 |
+| C | `c6i.large` | x86_64 (Xeon 8375C) | DIY pip | 4.12.0 | 257.36 | 3.89 |
 
-**B/C = 1.09x** hardware-only (Graviton vs x86, identical library).
+| comparison | meaning | result |
+|---|---|---|
+| **A/B** | **library only** (same instance, same version) | **1.12x** |
+| A/C | library + hardware | 0.88x |
+| B/C | hardware only | 0.78x |
 
-### Per-op, Graviton vs x86 (ms/call, DIY build on both)
+## 2. Per-op, COOL vs DIY on identical hardware (A vs B)
 
-| op | Graviton (B) | x86 (C) | B faster by |
+| op | COOL (A) | DIY (B) | COOL faster by |
 |---|---|---|---|
-| `resize` | 0.0500 | 0.0998 | **2.00x** |
-| `GaussianBlur` | 0.1960 | 0.3888 | **1.98x** |
-| `Canny` | 0.3179 | 0.3775 | 1.19x |
-| `findContours` | 0.0995 | 0.0930 | 0.93x |
-| `dilate` | 0.0827 | 0.0604 | 0.73x |
-| `adaptiveThreshold` | 2.9270 | 2.1458 | **0.73x** |
+| `GaussianBlur` | 0.1001 | 0.2910 | **2.91x** |
+| `dilate` | 0.0792 | 0.1005 | 1.27x |
+| `findContours` | 0.1002 | 0.1238 | 1.24x |
+| `Canny` | 0.3357 | 0.4126 | 1.23x |
+| `resize` | 0.0484 | 0.0493 | 1.02x |
+| `adaptiveThreshold` | 2.9358 | 2.9077 | **0.99x** |
 
-## 2. Reading these numbers honestly
+## 3. The honest read
 
-Graviton wins ~2x on `resize` and `GaussianBlur` but **loses ~0.73x on
-`adaptiveThreshold` and `dilate`**. End-to-end that nets to only 1.09x, because
-`adaptiveThreshold` is 62% of our pipeline and Graviton is slower at it.
+**COOL wins 1.12x end-to-end, and the reason is instructive.**
 
-This is the interesting finding, not a disappointment: `adaptiveThreshold` is
-precisely one of the operations AWS says COOL optimises (resize, adaptive
-Gaussian threshold, contour detection). Our DIY-Graviton arm is the **worst case
-for COOL** — the hardware is weak exactly where the library is meant to help.
-Arm A should therefore show a much larger per-op gain on `adaptiveThreshold`
-than the 1.09x end-to-end figure, which makes it the arm that matters most.
+COOL's per-op gains are large and consistent (1.2x–2.9x) on five of six
+operations — `GaussianBlur` at 2.91x is a genuinely large win.
 
-## 3. COOL arm (A) — pending Marketplace subscription
+But **end-to-end is only 1.12x because `adaptiveThreshold` is ~67% of our
+pipeline (2.94 ms of 4.41 ms), and COOL does not accelerate it at all (0.99x).**
+One unaccelerated op dominating the profile caps the total. This is a real
+property of our workload, not noise: the dark-blob detector added to fix the
+false-negative in `docs/CHALLENGES.md` C-01 is what makes `adaptiveThreshold`
+the hot spot.
 
-Blocked on one console action: subscribe to the **Cloud Optimized OpenCV for AWS
-Graviton** listing (seller: OpenCV, Ubuntu 24.04, ARM64, latest 3.1) so the AMI
-becomes visible to this account. `aws ec2 describe-images --owners
-aws-marketplace` currently returns nothing, which confirms no subscription yet.
+Two further results reported as-is, without spin:
 
-Once subscribed:
+- **B/C = 0.78x**: our DIY Graviton run is *slower* than DIY Intel on this
+  workload. Graviton is not automatically faster here.
+- **A/C = 0.88x**: COOL on Graviton does not beat DIY on x86 in raw throughput.
 
-```powershell
-python aws\run_bench.py --region us-east-1 `
-    --arm "A=<COOL_AMI_ID>:t4g.small:cool" `
-    --arm "B=ami-0bec8cef5313300ad:t4g.small" `
-    --arm "C=ami-0045d7fc2ad003464:t3.small"
-python bench\show.py
-```
+Per-op hardware note (B vs C): Graviton wins `resize` (1.13x) and loses
+`findContours` (0.51x) and `dilate` (0.40x).
 
-Note arm B must stay `t4g.small` — same family as arm A — or the library delta is
-confounded with the hardware delta.
+**Where this argues for COOL:** workloads dominated by blur, edges and contour
+work — the classic video pre/post-processing path the AWS blog measured, where
+they reported ~30%. A pipeline dominated by one unoptimised operation sees much
+less. Stating that plainly is more credible than quoting only the 2.91x.
 
-## 4. Full reproduction
+## 4. Cost per 1000 frames
+
+`cost = (usd_per_hour / 3600) x (1000 / fps)`
+
+| arm | usd/hr | s/frame | usd/1000 frames |
+|---|---|---|---|
+| A COOL `c6g.large` | 0.072 | 4.410 | 0.0000882 |
+| C DIY `c6i.large` | 0.085 | 3.885 | 0.0000917 |
+
+A is marginally cheaper per 1000 frames despite lower fps, because Graviton is
+cheaper per hour. The COOL AMI also carries a separate Marketplace licence fee,
+so A's true cost is **higher** than shown — this table understates COOL's cost.
+
+## 5. Compliance note: OpenCV version
+
+The competition requires **OpenCV 5** for substantive analysis. Two facts:
+
+1. **The application runs OpenCV 5.0.0** (`backend/app/vision.py`), verified via
+   `/health` on every run.
+2. **The COOL Graviton 2 AMI bundles OpenCV 4.12** — confirmed on the instance:
+   `/opt/opencv_install/lib/libopencv_imgproc.so.4.12.0`, `cv2.__version__`
+   reports `4.12.0`. Its libs are KleidiCV-accelerated.
+
+Because of that, the benchmark pins all arms to 4.12.0. Comparing COOL 4.12
+against DIY 5.x would have confounded the optimisation with a major version
+change and produced a meaningless number.
+
+**Next step to remove this caveat:** subscribe to **Cloud Optimized OpenCV for
+AWS Graviton 4** (Marketplace, latest version 3.1, listed as OpenCV 5-based) and
+re-run on `c8g`/`c8gn`. That yields an all-OpenCV-5 comparison.
+
+## 6. Reproduction
 
 ```powershell
 aws login
-# AMI ids used here (us-east-1, re-derive per docs/COOL-setup.md section 2):
-#   arm64 Ubuntu 24.04 : ami-0bec8cef5313300ad  (ubuntu-noble-24.04-arm64-server-20260923)
-#   amd64 Ubuntu 24.04 : ami-0045d7fc2ad003464  (ubuntu-noble-24.04-amd64-server-20260923)
-python aws\run_bench.py --region us-east-1 `
-    --arm "B=ami-0bec8cef5313300ad:t4g.small" `
-    --arm "C=ami-0045d7fc2ad003464:t3.small"
+python aws\run_bench.py --region us-east-1 --opencv-version 4.12.0.88 `
+    --arm "A=ami-03175684e1b021dda:c6g.large:cool" `
+    --arm "B=ami-0bec8cef5313300ad:c6g.large" `
+    --arm "C=ami-0045d7fc2ad003464:c6i.large"
 python bench\show.py
 ```
 
-The orchestrator drives instances over Systems Manager (no SSH keypair), walks
-candidate AZs until one offers the instance type (`us-east-1e` rejects `t4g.*`),
-and terminates every instance in a `finally` block.
+AMI IDs (us-east-1):
+- A `ami-03175684e1b021dda` — COOL Graviton2 (`OpenCV-graviton-optimized-AMI-prod-2jrbxn57qotcw`)
+- B `ami-0bec8cef5313300ad` — Ubuntu 24.04 arm64 `20260923`
+- C `ami-0045d7fc2ad003464` — Ubuntu 24.04 amd64 `20260923`
 
-## 5. Issues hit getting these numbers (see also docs/CHALLENGES.md)
+Helper tools: `aws/find_ami_types.py` (DryRun probe for supported instance
+types) and `aws/probe_cool_ami.py` (discovers a COOL install layout).
+
+## 7. Issues hit (also in docs/CHALLENGES.md)
 
 | # | Problem | Fix |
 |---|---|---|
-| 1 | `ImportError: libGL.so.1` on headless host | install `libgl1 libglib2.0-0t64`; kept full `opencv-python` (not `-headless`) so the control matches AWS's published DIY baseline |
-| 2 | `Unsupported`: `t4g.small` not offered in `us-east-1e` | launcher tries each candidate AZ in turn |
-| 3 | samples not on the instance (`/samples`) | generate on-instance from the seeded generator instead of uploading (SSM commands are size-limited) |
-| 4 | **unseeded RNG in sample generator** | fixed `SEED`; arms would otherwise benchmark different images |
-| 5 | `exec > log` in the install step swallowed later output | scope the redirect to a subshell |
-| 6 | two JSON blobs in stdout, `json.loads` "Extra data" | sentinels `__BENCH_JSON_BEGIN__` / `__BENCH_JSON_END__` |
-| 7 | SSM `get_command_invocation` rejects `Filters`; `list_command_invocations` filter needs lowercase `key`/`value` scalar and rejects `*` | poll `list_command_invocations` unfiltered |
+| 1 | COOL AMI rejects `t4g.*`: `UnsupportedOperation` | COOL Graviton2 supports only m6g/c6g and minimum `.large`. Found with `aws/find_ami_types.py` (DryRun, no cost) |
+| 2 | AMI snapshot is 40 GB, hardcoded 20 GB volume → `InvalidBlockDeviceMapping` | stop overriding the root volume; `--volume-size` opt-in |
+| 3 | `Unsupported`: instance type not offered in that AZ | launcher walks candidate AZs (`us-east-1e` rejects `c6g.large`) |
+| 4 | **`/opt/cool` does not exist on the Graviton2 image** | probed it: real layout is `/opt/opencv_install/{lib,lib/python3.12/site-packages}`. Detection now probes both paths |
+| 5 | COOL reported as `build=DIY` | `detect_build()` checked only `/opt/cool`; would have mislabelled the COOL arm in the results file |
+| 6 | `python3.12` ran but `cv2` missing | env exports do not reliably carry between separate RunShellScript command entries — inline them per command |
+| 7 | `ImportError: libGL.so.1` | install `libgl1 libglib2.0-0t64` |
+| 8 | samples missing on instance | generate on-instance from the seeded generator (SSM command size limit) |
+| 9 | **unseeded RNG in the sample generator** | fixed seed; arms would otherwise benchmark different images |
+| 10 | `exec > log` swallowed later output | scope redirect to a subshell |
+| 11 | two JSON blobs in stdout → "Extra data" | `__BENCH_JSON_BEGIN__` / `__BENCH_JSON_END__` sentinels |
+| 12 | SSM reported Success on a failed benchmark | capture `BENCH_EXIT`, surface remote logs, print diagnostics |
+| 13 | version confound: COOL 4.12 vs DIY 5.x | `--opencv-version` pin |
 
-## 6. Cost of this run
+## 8. Cost of these runs
 
-2 instances x ~4 minutes + 20 GB gp3 each, auto-terminated. Under **$0.02**,
-consistent with the $0.01 estimate in `docs/COST-GUARD.md`.
+8 short-lived instances (4 benchmark attempts + probes + a 2-arm run), all
+auto-terminated in `finally` blocks; `$0.04`–`$0.20` at `c6g.large`/`c6i.large`
+rates. Within the `$25` cap with no action triggered.

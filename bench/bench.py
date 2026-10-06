@@ -21,13 +21,20 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-COOL_ROOT = Path("/opt/cool")
-# Ops COOL specifically optimizes, per AWS Marketplace listing.
-OPS = ("resize", "GaussianBlur", "adaptiveThreshold", "Canny", "findContours", "dilate")
+COOL_ROOTS = [Path("/opt/cool"), Path("/opt/opencv_install")]
 
 
 def detect_build() -> str:
-    return "COOL" if COOL_ROOT.exists() else "DIY"
+    """COOL ships at /opt/cool on the Graviton4 image and /opt/opencv_install on
+    the Graviton2 image, so both must be probed or COOL gets mislabelled DIY."""
+    return "COOL" if any(p.exists() for p in COOL_ROOTS) else "DIY"
+
+
+def build_marker() -> str:
+    present = [str(p) for p in COOL_ROOTS if p.exists()]
+    return ", ".join(present) if present else "no COOL install found"
+# Ops COOL specifically optimizes, per AWS Marketplace listing.
+OPS = ("resize", "GaussianBlur", "adaptiveThreshold", "Canny", "findContours", "dilate")
 
 
 def cpu_model() -> str:
@@ -137,7 +144,7 @@ def main():
     result = {
         "label": args.label,
         "build": detect_build(),
-        "build_marker": "/opt/cool present" if COOL_ROOT.exists() else "/opt/cool absent",
+        "build_marker": build_marker(),
         "opencv_version": cv2.__version__,
         "pythonpath": os.environ.get("PYTHONPATH", ""),
         "arch": platform.machine(),
