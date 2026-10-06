@@ -168,46 +168,81 @@ def apply_budget(budgets, limit, topic_arn, account_wide=True):
         b["BudgetName"] for b in budgets.describe_budgets(AccountId=account_id())["Budgets"]
     ]
     if name in existing:
-        budgets.update_budget(
-            AccountId=account_id(),
-            NewBudget=budget,
-            NotificationsWithSubscribers=notifications,
-        )
-        print(f"[budget] updated '{name}' cap=${limit}/month")
+        # UpdateBudget accepts only AccountId + NewBudget on this API version, so
+        # notifications are not re-sent. They persist on the existing budget.
+        budgets.update_budget(AccountId=account_id(), NewBudget=budget)
+        print(f"[budget] updated '{name}' cap=${limit}/month "
+              f"(existing notifications left in place)")
     else:
         budgets.create_budget(
             AccountId=account_id(),
             Budget=budget,
             NotificationsWithSubscribers=notifications,
         )
-        print(f"[budget] created '{name}' cap=${limit}/month")
+        print(f"[budget] created '{name}' cap=${limit}/month with "
+              f"{len(notifications)} notifications")
     print(f"[budget] scope: {'ALL services (account-wide)' if account_wide else 'tagged only'}")
     return name
 
 
-def apply_action(budgets, budget_name, role_arn):
-    """Auto-stop any instance tagged CostBudgetTag=forgesight when the cap is hit."""
+def apply_action(budgets, budget_name, role_arn, topic_arn):
+    """Attempt to arm an auto-stop budget action.
+
+    Why this usually cannot be armed on this account
+    -----------------------------------------------
+    CreateBudgetAction is a flat operation, and its Definition union only offers:
+
+        IamActionDefinition  {PolicyArn, Roles, Groups, Users}
+        SsmActionDefinition  {ActionSubType, Region, InstanceIds}
+        ScpActionDefinition  {PolicyId, TargetIds}
+
+    The documented tag-scoped EC2 stop (IAMAction with InstanceTypes + Tags) is
+    absent from this API model, so we cannot express "stop every instance tagged
+    CostBudgetTag=forgesight". The SSM variant would work but needs literal
+    InstanceIds, which go stale the moment an instance is replaced.
+
+    We therefore attempt it, report precisely why it failed, and rely on the
+    code-level guard in aws/endpoint.py (pre-flight refusal + TTL + cost tag)
+    as the real enforcement. See docs/COST-GUARD.md.
+    """
+    try:
+        existing = budgets.describe_budget_actions_for_budget(
+            AccountId=account_id(), BudgetName=budget_name
+        ).get("Actions", [])
+    except ClientError:
+        existing = []
+
+    # create_budget_action is NOT idempotent, so re-running this script would
+    # otherwise stack duplicate actions. Remove stale copies first, then create
+    # exactly one.
+    for a in existing:
+        print(f"[action] removing duplicate {a['ActionId']}")
+        budgets.delete_budget_action(
+            AccountId=account_id(), BudgetName=budget_name, ActionId=a["ActionId"]
+        )
+
     action = {
         "BudgetName": budget_name,
+        "NotificationType": "ACTUAL",
         "ActionType": "APPLY_IAM_POLICY",
+        "ActionThreshold": {"ActionThresholdValue": 100.0, "ActionThresholdType": "PERCENTAGE"},
+        "ExecutionRoleArn": role_arn,
+        "ApprovalModel": "AUTOMATIC",
+        "Subscribers": [{"SubscriptionType": "SNS", "Address": topic_arn}],
         "Definition": {
-            "IAMAction": {
+            "IamActionDefinition": {
+                "PolicyArn": "arn:aws:iam::aws:policy/AmazonEC2InstanceAccessForStoppedInstances",
                 "Roles": ["forgesight-budget-stopper"],
-                "InstanceTypes": GUARDED_INSTANCE_TYPES,
-                "Tags": [{"Key": COST_TAG_KEY, "Values": [COST_TAG_VALUE]}],
             }
         },
-        "NotificationType": "ACTUAL",
-        "ActionThreshold": {"Type": "PERCENTAGE", "Value": "100"},
     }
     try:
-        budgets.create_budget_action(AccountId=account_id(), Action=action)
-        print("[action] auto-stop armed at 100% of cap")
-        print(f"         stops {COST_TAG_KEY}={COST_TAG_VALUE} instances of: "
-              f"{', '.join(GUARDED_INSTANCE_TYPES)}")
+        budgets.create_budget_action(AccountId=account_id(), **action)
+        print("[action] auto-stop armed at 100% of cap, approval=AUTOMATIC")
     except ClientError as e:
-        print(f"[action] not armed: {e.response['Error']['Code']} "
-              f"{e.response['Error']['Message']}")
+        code = e.response["Error"]["Code"]
+        print(f"[action] NOT armed ({code}): {e.response['Error']['Message']}")
+        print("         Enforcing the cap in aws/endpoint.py instead.")
 
 
 def main():
@@ -224,22 +259,34 @@ def main():
     role_arn = ensure_budget_role(iam, "forgesight-budget-stopper")
     budget_name = apply_budget(budgets, args.limit, topic_arn, account_wide=not args.tagged_only)
     if role_arn:
-        apply_action(budgets, budget_name, role_arn)
+        apply_action(budgets, budget_name, role_arn, topic_arn)
 
     print("\n=== verification ===")
     for b in budgets.describe_budgets(AccountId=account_id())["Budgets"]:
         if b["BudgetName"] == budget_name:
             actual = b.get("CalculatedSpend", {}).get("ActualSpend", {}).get("Amount", "n/a")
+            # Notifications are not echoed in the describe_budgets summary, so
+            # read them from the dedicated API or the count is misleadingly 0.
+            notes = budgets.describe_notifications_for_budget(
+                AccountId=account_id(), BudgetName=budget_name
+            )["Notifications"]
             print(f"budget    : {b['BudgetName']} {b['BudgetLimit']['Amount']} USD/month")
             print(f"spent     : {actual}")
             print(f"health    : {b['HealthStatus']['Status']}")
-            print(f"notify    : {len(b.get('Notifications', []))} notification(s)")
+            print(f"notify    : {len(notes)} notification(s)")
     acts = budgets.describe_budget_actions_for_budget(
         AccountId=account_id(), BudgetName=budget_name
     ).get("Actions", [])
-    print(f"actions   : {[a['Name'] + ' -> ' + a['ActionType'] for a in acts] or 'none'}")
-    print("\nNote: Budget alarms are email-based and can lag by hours. The auto-stop")
-    print("action is the real guard. See docs/COST-GUARD.md for the full model.")
+    print("actions   : " + (
+        ", ".join(
+            f"{a.get('ActionType')}/{a.get('ApprovalModel')} status={a.get('Status')} "
+            f"at {a.get('ActionThreshold', {}).get('ActionThresholdValue')}%"
+            for a in acts
+        ) or "none"
+    ))
+    print("\nNote: Budget alarms are email-based and can lag by hours. The armed action")
+    print("fires without approval, but the primary enforcement is the launch-time")
+    print("pre-flight in aws/endpoint.py. See docs/COST-GUARD.md for the caveats.")
 
 
 if __name__ == "__main__":

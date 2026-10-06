@@ -1,15 +1,28 @@
-"""Generate synthetic inspection samples: clean weld, defect, blurry, glare."""
-import cv2
-import numpy as np
+"""Generate synthetic inspection samples: clean weld, defect, blurry, glare, damage.
+
+Deterministic by construction. Every pixel is drawn from a fixed RNG seed, so
+regenerating on any machine or architecture yields byte-identical images. That
+matters for the COOL benchmark: arms A/B/C must all measure the *same* input, or
+the comparison is meaningless. Unseeded noise here would have silently produced
+different images per instance.
+
+Usage:
+    python -m backend.app.make_samples              # write to <repo>/samples
+    python make_samples.py /tmp/samples             # write to a given directory
+"""
+import sys
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parents[2] / "samples"
-OUT.mkdir(exist_ok=True)
+import cv2
+import numpy as np
+
+# Fixed seed: identical images on every arm, every run, every architecture.
+SEED = 20261006
 
 
-def base_plate(w=640, h=480):
+def base_plate(rng, w=640, h=480):
     img = np.full((h, w, 3), 140, np.uint8)
-    noise = np.random.randint(-12, 12, (h, w, 1), dtype=np.int16)
+    noise = rng.integers(-12, 12, (h, w, 1), dtype=np.int16)
     return np.clip(img.astype(np.int16) + noise, 0, 255).astype(np.uint8)
 
 
@@ -24,31 +37,43 @@ def add_weld(img, y, defect=False):
     return img
 
 
-clean = add_weld(base_plate(), 120, defect=False)
-cv2.imwrite(str(OUT / "weld_clean.jpg"), clean)
+def generate(out_dir: Path):
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-defect = add_weld(base_plate(), 120, defect=True)
-for i in range(14):
-    x = 250 + i * 22
-    cv2.circle(defect, (x, 300 + (i % 3) * 9), 7, (60, 60, 60), -1)
-cv2.imwrite(str(OUT / "weld_defect.jpg"), defect)
+    clean = add_weld(base_plate(np.random.default_rng(SEED)), 120, defect=False)
+    cv2.imwrite(str(out_dir / "weld_clean.jpg"), clean)
 
-blurry = cv2.GaussianBlur(clean, (0, 0), 7.0)
-cv2.imwrite(str(OUT / "weld_blurry.jpg"), blurry)
+    defect = add_weld(base_plate(np.random.default_rng(SEED)), 120, defect=True)
+    for i in range(14):
+        cv2.circle(defect, (250 + i * 22, 300 + (i % 3) * 9), 7, (60, 60, 60), -1)
+    cv2.imwrite(str(out_dir / "weld_defect.jpg"), defect)
 
-glare = clean.copy()
-cv2.circle(glare, (300, 240), 150, (255, 255, 255), -1)
-glare = cv2.addWeighted(glare, 0.55, np.full_like(glare, 255), 0.45, 0)
-cv2.imwrite(str(OUT / "weld_glare.jpg"), glare)
+    cv2.imwrite(
+        str(out_dir / "weld_blurry.jpg"), cv2.GaussianBlur(clean, (0, 0), 7.0)
+    )
 
-# Severe porosity / undercut — drives defect_score high enough to escalate
-damage = add_weld(base_plate(), 120, defect=True)
-for i in range(26):
-    x = 120 + i * 18
-    cv2.circle(damage, (x, 130 + (i % 5) * 5), 10, (25, 25, 25), -1)
-for i in range(12):
-    x = 300 + i * 20
-    cv2.ellipse(damage, (x, 340), (16, 9), 0, 0, 360, (45, 45, 45), -1)
-cv2.imwrite(str(OUT / "weld_damage.jpg"), damage)
+    glare = clean.copy()
+    cv2.circle(glare, (300, 240), 150, (255, 255, 255), -1)
+    cv2.imwrite(
+        str(out_dir / "weld_glare.jpg"),
+        cv2.addWeighted(glare, 0.55, np.full_like(glare, 255), 0.45, 0),
+    )
 
-print("wrote:", ", ".join(p.name for p in sorted(OUT.glob("*.jpg"))))
+    damage = add_weld(base_plate(np.random.default_rng(SEED)), 120, defect=True)
+    for i in range(26):
+        cv2.circle(damage, (120 + i * 18, 130 + (i % 5) * 5), 10, (25, 25, 25), -1)
+    for i in range(12):
+        cv2.ellipse(
+            damage, (300 + i * 20, 340), (16, 9), 0, 0, 360, (45, 45, 45), -1
+        )
+    cv2.imwrite(str(out_dir / "weld_damage.jpg"), damage)
+
+    return sorted(out_dir.glob("*.jpg"))
+
+
+if __name__ == "__main__":
+    target = Path(sys.argv[1]) if len(sys.argv) > 1 else (
+        Path(__file__).resolve().parents[2] / "samples"
+    )
+    files = generate(target)
+    print("wrote:", ", ".join(f.name for f in files))

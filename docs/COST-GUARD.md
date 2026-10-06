@@ -31,27 +31,45 @@ Alarms publish to SNS topic `forgesight-budget-alerts`.
 
 ---
 
-## 2. Honest limitation: the alarm is not the guard
+## 2. The alarm is not the guard — because alarms lag
 
 AWS Budget notifications are email-based and **can lag by hours**. A runaway
-instance keeps billing in that window.
+instance keeps billing in that window. Two layers close that gap.
 
-We also tried to arm a Budget *action* (auto-stop at 100%). It could not be
-armed on this account, for a concrete reason:
+### 2a. Budget action (armed, but semantics unverified)
 
 ```
-CreateBudgetAction.Definition -> IamActionDefinition
-    members: ['PolicyArn', 'Roles', 'Groups', 'Users']
+actions : APPLY_IAM_POLICY / ApprovalModel=AUTOMATIC / STANDBY / 100%
 ```
 
-The documented tag-scoped EC2 shape (`IAMAction` with `InstanceTypes` + `Tags`)
-is **absent from this account's API model**. The nearest alternative,
-`SsmActionDefinition`, requires explicit `InstanceIds`, which breaks the moment an
-instance is replaced. So a tag-driven auto-stop is not available here, and we do
-not pretend it is.
+An action **is** armed and fires without human approval.
 
-**Therefore the cap is enforced in code, at launch time**, in
-`aws/endpoint.py`:
+**Correction to an earlier note in this file:** we first concluded that no
+auto-stop action could be armed on this account, based on the shape of
+`CreateBudgetAction.Definition`:
+
+```
+IamActionDefinition  ->  {PolicyArn, Roles, Groups, Users}
+SsmActionDefinition  ->  {ActionSubType, Region, InstanceIds}
+ScpActionDefinition  ->  {PolicyId, TargetIds}
+```
+
+The documented tag-scoped EC2 stop (`IAMAction` with `InstanceTypes` + `Tags`) is
+genuinely **absent from this API model**. That part was right. But the
+`IamActionDefinition` shape *is* accepted, so the action was created
+successfully — our earlier "cannot be armed" claim was wrong.
+
+What remains genuinely unverified: whether that action actually **stops EC2
+instances** on this account, since the only role reference available is
+`Roles=["forgesight-budget-stopper"]` with no instance-type or tag selector. We
+have not observed it fire. Treat it as a best-effort net, not the primary guard.
+
+`create_budget_action` is **not idempotent** — re-running stacks duplicates, so
+the script deletes existing actions before creating exactly one.
+
+### 2b. Code-level enforcement (primary)
+
+`aws/endpoint.py` enforces the cap *at launch time*:
 
 | Mechanism | What it does |
 |---|---|
@@ -60,8 +78,13 @@ not pretend it is.
 | cost tag | every instance carries `CostBudgetTag=forgesight` so stop/status can find it |
 | `stop` | terminates every tagged instance |
 
-`aws/run_bench.py` additionally terminates its instances in a `finally` block, so
-a crashed benchmark does not leave instances running.
+`aws/run_bench.py` terminates its instances in a `finally` block, so a crashed
+benchmark cannot leave instances running. Verified after the first real run:
+
+```
+$ aws ec2 describe-instances --filters instance-state-name=running,pending,...
+[]
+```
 
 ### Verified behaviour
 
