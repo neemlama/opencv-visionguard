@@ -28,16 +28,28 @@ SEVERE_CLASSES = ("inclusion", "rolled-in_scale", "pitted_surface")
 
 # Quality gate thresholds. Set from the NEU capture distribution, and recorded
 # here rather than buried in the agent so they can be argued with.
-# Quality gate thresholds, all derived from measured distributions on 240 real
-# NEU captures (eval/quality_gate_calibration.py), not chosen by feel.
+# Quality gate thresholds, derived from ALL 1800 real NEU captures
+# (eval/quality_gate_calibration.py, eval/quality_gate_recalibrate.py).
+#
+# Two of these are well separated and load-bearing:
+#   sharpness  clean p05 = 1025 vs blurred p50 = 1.9   -> enormous margin
+#   noise      clean p99 = 10.29 vs noisy p05 = 11.31 -> clean separation
+#
+# Two are NOT separable and are set permissively so they never refuse a good
+# capture:
+#   glare      real p99 = 0.561, max = 0.754; our synthetic glare only reaches
+#              0.388, so any limit low enough to catch it also rejects ~14% of
+#              legitimate captures. Rough, scaled steel has large genuinely
+#              saturated regions; a 1xN "largest bright region" feature does not
+#              separate them either (clean p99 = 0.324 vs glare p05 = 0.282).
+#              Glare detection is therefore NOT claimed - see
+#              docs/EVALUATION.md.
+#   blown      same reasoning.
 SHARPNESS_MIN = 12.0        # Laplacian variance; real captures sit at 1025+
-GLARE_MAX = 0.05            # clean p99 = 0.0427
-BLOWN_MAX = 0.035           # clean p99 = 0.0267
-CRUSHED_MAX = 0.05          # never fires on clean data
-# Sensor noise RAISES Laplacian variance, so a noisy frame reads as sharper and
-# slips past every other check. Without this the loop auto-passed 196 of 200
-# clean captures under noise. Clean p99 = 10.29, noisy p05 = 11.31.
-NOISE_MAX = 10.8
+NOISE_MAX = 10.8            # separates cleanly, and prevents a real safety bug
+GLARE_MAX = 0.80            # above the real maximum (0.754): effectively off
+BLOWN_MAX = 0.70            # above the real p99 (0.409): effectively off
+CRUSHED_MAX = 0.05          # never fires on real data
 
 _MODEL = None
 

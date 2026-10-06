@@ -23,13 +23,18 @@ from backend.app.capture import DEGRADATIONS, make  # noqa: E402
 
 IMAGES = ROOT / "NEU-DET" / "NEU-DET" / "IMAGES"
 
+# soft_focus leads because it is the ONE condition where the loop detects a bad
+# capture, acts on it, and converges. under_exposed and specular_glare are kept
+# deliberately as honest failure cases: the gate has no brightness check, and it
+# cannot separate synthetic glare from natural saturated regions on scaled steel,
+# so neither recaptures. sensor_noise shows the gate correctly refusing.
 CASES = [
-    ("crazing_1.jpg", "clean"),
     ("inclusion_1.jpg", "soft_focus"),
+    ("inclusion_1.jpg", "under_exposed"),
     ("patches_1.jpg", "specular_glare"),
-    ("pitted_surface_1.jpg", "under_exposed"),
-    ("rolled-in_scale_1.jpg", "low_contrast"),
-    ("scratches_2.jpg", "sensor_noise"),
+    ("rolled-in_scale_1.jpg", "sensor_noise"),
+    ("crazing_1.jpg", "clean"),
+    ("scratches_2.jpg", "low_contrast"),
 ]
 
 

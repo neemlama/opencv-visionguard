@@ -1,0 +1,12 @@
+{
+  "bright_region_max_suggested": 0.30316,
+  "clean_refusal_pct": 1.33,
+  "glare_detection_pct": 10.67,
+  "old_limits": {
+    "glare_ratio_max": 0.05,
+    "blown_highlights_max": 0.035,
+    "note": "set from a 300-file prefix; real p99 is 0.561"
+  },
+  "real_clean_share_p99": 0.32409,
+  "glare_share_p05": 0.28223
+}

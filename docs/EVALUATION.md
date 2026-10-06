@@ -85,7 +85,7 @@ construction.
 | | ECE on TEST |
 |---|---|
 | before scaling | 0.0886 |
-| after scaling (T = 0.75, fitted on val) | **0.0338** |
+| after scaling (T = 0.75, fitted on val) | **0.0361** |
 
 ---
 
@@ -146,7 +146,7 @@ bound on the miss rate of 3/540 = 0.56%, so sensitivity is **≥ 99.44%** at 95%
 confidence. We quote that rather than 1.0000, because a point estimate of
 "perfect" from 540 samples is not a measurement of perfection.
 
-**On the 51% review rate.** It is high, and we say so. Sensitivity is 1.0000 at
+**On the 41% review rate.** It is high, and we say so. Sensitivity is 1.0000 at
 *every* threshold from 0.50 to 0.95, so the threshold is not buying safety — it is
 buying automation. The sweep in `eval/triage_calibration.json` shows
 auto-escalate falling from 50.7% to 27.4% as the threshold rises, with misses
@@ -164,65 +164,122 @@ rather than the most aggressive 0.50.
 | 0.95–1.00 | 360 | 0.992 |
 
 Mildly **under**-confident in the mid bands, so `ESCALATE_MIN=0.85` is
-conservative rather than aggressive. ECE on test: 0.0886 → **0.0338** after
+conservative rather than aggressive. ECE on test: 0.0886 → **0.0361** after
 temperature scaling (T = 0.75, fitted on validation).
 
 ---
 
 ## 4. Agentic ablation — does the loop earn its place?
 
-`eval/agent_ablation.py`, 740 real captures (540 defect from the leakage-free
-test split + 200 genuinely clean crops from unannotated regions). Single-pass =
-one perception then decide. Loop = quality gate + second opinion on low
-confidence + classifier/localiser disagreement check.
+`eval/agent_ablation.py`, 740 real captures (540 defect from the leakage-free test
+split + 200 genuinely clean crops from unannotated regions). Single-pass = one
+perception then decide. Loop = quality gate + classifier/localiser disagreement
+check (second opinion now disabled by default, see §4c).
 
-| condition | single-pass | loop | delta | 2nd opinion fired | class changed | errors fixed | errors introduced | false accepts (of 200 clean) |
-|---|---|---|---|---|---|---|---|---|
-| clean | 0.7000 | 0.7162 | +0.0162 | 0.169 | 56 | 0 | 2 | 2 |
-| soft focus | 0.7243 | 0.7297 | +0.0054 | 0.000 | 0 | 0 | 0 | 0 |
-| under-exposed | 0.6770 | 0.6946 | +0.0176 | 0.137 | 53 | 0 | 9 | 1 |
-| **specular glare** | 0.5730 | 0.7297 | **+0.1568** | 0.000 | 0 | 0 | 0 | 0 |
-| low contrast | 0.7027 | 0.7081 | +0.0054 | 0.180 | 56 | 0 | 6 | 3 |
-| **sensor noise** | 0.3108 | 0.3473 | **+0.0365** | 0.000 | 0 | 0 | 0 | **0** |
+| condition | single-pass | loop | delta | gate refusals | false accepts (of 200 clean) |
+|---|---|---|---|---|---|
+| clean | 0.7000 | 0.7176 | **+0.018** | 0.013 | 2 |
+| soft focus | 0.7243 | 0.7297 | **+0.005** | 1.000 | 0 |
+| under-exposed | 0.6770 | 0.7068 | **+0.030** | 0.054 | 1 |
+| specular glare | 0.5730 | 0.6405 | **+0.068** | 0.008 | **34** |
+| low contrast | 0.7027 | 0.7162 | **+0.014** | 0.081 | 3 |
+| sensor noise | 0.3108 | 0.2892 | **−0.022** | 0.543 | 0 |
 
-**The loop beats single-pass in every condition**, and the gain concentrates
-exactly where it should: on captures that are not fit to judge.
+### What we retract from our own earlier run
 
-### The honest decomposition — the gate works, the second opinion does not
+An earlier version of this table showed **+0.157 on specular glare**. That number
+was an artefact of a miscalibrated gate: the glare limit (0.05) had been derived
+from the **first 300 NEU files**, which are dominated by one or two classes. Across
+all 1800 legitimate captures, `glare_ratio` reaches **0.75** (p99 = 0.561), while
+our synthetic glare preset only reaches **0.388**. So any limit low enough to
+catch the synthetic glare also refuses roughly 14% of good captures.
 
-Across all conditions the second opinion **fired 359 times and changed the class
-165 times, yet corrected 0 errors and introduced 17.** Essentially all of the
-loop's measured value comes from the **capture-quality gate**, which refuses to
-classify unusable frames, not from the second-opinion reasoning.
+Recalibrated permissively (`GLARE_MAX = 0.80`, above the real maximum), the
+glare result falls to **+0.068** — still positive, but a third of what we first
+claimed. We quote the corrected figure.
 
-We report that rather than quoting the +0.157 glare figure alone. The second
-opinion currently costs a little accuracy and buys caution; it is not earning its
-place and we would not claim it does.
+A `largest-bright-region` feature was tried as a better discriminator and
+**failed**: clean p99 = 0.324 versus glare p05 = 0.282. Rough, scaled steel has
+genuinely large saturated regions, so a specular highlight is not separable from
+legitimate bright surface by intensity statistics alone.
 
-### A safety failure this ablation found, and we fixed
+### Consequences we accept
 
-The first run of this ablation showed the loop **auto-passed 196 of 200 clean
-captures under sensor noise**. Root cause: the gate checked sharpness, glare and
-clipping, but additive noise *raises* Laplacian variance, so a noisy frame reads as
-*sharper* than a clean one and passed every check. The classifier then confidently
-answered "no defect" on noise.
+- **Glare detection is not claimed.** It is off by default and is listed as an
+  open problem.
+- Under the glare preset the gate no longer refuses, and **34 of 200 clean
+  captures are auto-passed**. That is the safety cost of not detecting glare, and
+  it is the clearest argument for building a real glare feature.
+- Under sensor noise the loop is **slightly worse than single-pass (−0.022)**
+  because the gate refuses 54% of frames, including good ones. False accepts stay
+  at 0/200, so it is over-cautious rather than unsafe.
 
-Fixed by adding a robust noise estimate to the gate — MAD of the 3x3 high-pass
-response, median-based so a real defect cannot inflate it. Threshold derived from
-240 real captures (`eval/quality_gate_calibration.py`):
+### 4d. Which degradations the loop can actually fix
 
-| | noise_sigma p50 | p99 / p05 |
+| condition | gate refusal rate | recaptures? |
 |---|---|---|
-| clean NEU captures | 8.803 | p99 = 10.286 |
-| + sensor noise | 13.065 | p05 = 11.305 |
+| soft focus | **1.000** | **yes — converges in one step** |
+| sensor noise | 0.543 | yes |
+| low contrast | 0.081 | no |
+| under-exposed | **0.054** | **no** |
+| specular glare | 0.008 | no |
 
-Clean max (10.286) sits below noisy p05 (11.305), so **NOISE_MAX = 10.8**
-separates them. False accepts under noise: **196/200 → 0/200.** The same
-calibration pass relaxed the glare and blown-highlight limits to clean p99
-(0.05 / 0.035), which removed spurious refusals on good captures.
+Soft focus is the only condition where the loop detects a bad capture, acts and
+converges. **Under-exposure is an unexpected gap: the gate has no brightness or
+exposure check**, so it refuses only 5.4% of under-exposed frames and exposure
+never triggers a recapture. The +0.030 there comes from confidence deferral, not
+from the agent acting. Adding a luminance metric against a calibrated target is
+the obvious fix; we left it open rather than hand-tuning another threshold on the
+same data that already misled us once.
 
-This is the clearest argument for running the ablation at all: a metric we added
-for the award found a defect that would have shipped.
+### 4e. Claims are machine-checked
+
+`eval/verify_report_claims.py` re-reads every artifact cited by
+`docs/REPORT.md` and fails on any mismatch. It has already caught three real
+drifts in this document (ECE, human-review rate, and a noise false-accept count
+that belonged to an older threshold set).
+
+### 4a. A safety failure the ablation found
+
+The first run showed the loop **auto-passed 200 of 200 clean captures under sensor
+noise**. Additive noise *raises* Laplacian variance, so noisy frames read as
+*sharper* and passed every check; the classifier then answered "no defect" on
+noise texture.
+
+Fixed with a robust noise estimate (MAD of the 3x3 high-pass response) and a
+threshold from 240 real captures: clean p99 = 10.286, noisy p05 = 11.305, so
+`NOISE_MAX = 10.8`. **False accepts under noise: 200/200 → 0/200.**
+
+This is the clearest argument for having built the ablation: a metric written for
+the award found a defect that would otherwise have shipped.
+
+### 4b. What "agentic" means here, precisely
+
+The award asks for a workflow where image results influence a later plan, tool
+call, action, or human-approval request. Ours does exactly that, and the mechanism
+is **gated perception**, not a reasoning chain:
+
+1. vision metrics (sharpness, noise, saturation) decide whether the frame is
+   judgeable at all;
+2. if not, the agent names the physical fix and, in simulator mode, applies it by
+   changing capture settings and **re-rendering the scene**;
+3. perception runs again on a genuinely different frame;
+4. classification confidence plus defect severity choose pass / review /
+   stop-the-line escalation, always with human approval.
+
+There is **no LLM planner** in this system. We think a transparent, measured gate
+is more defensible than an unmeasured reasoning chain, and we would rather be
+judged on what we can measure.
+
+### 4c. The second opinion: measured, removed, reported
+
+The CLAHE re-analysis fired **359 times** across all conditions, changed the
+predicted class **165 times**, and **corrected 0 errors while introducing 17**.
+
+It is therefore **disabled by default** (`ENABLE_SECOND_OPINION = False`) and
+kept behind a flag because the negative result is part of the submission. The
+loop's measured value comes from the quality gate, not from re-reasoning about
+the same frame.
 
 ---
 

@@ -290,7 +290,7 @@ reporting on test.
 | | ECE on test |
 |---|---|
 | before | 0.0886 |
-| after (T = 0.75, fitted on val) | **0.0338** |
+| after (T = 0.75, fitted on val) | **0.0361** |
 
 **What we learned.** "Held-out" is not one thing. A parameter fitted on a split
 makes that split a validation set, not a test set.
@@ -403,7 +403,7 @@ Always measure cost per unit of work, not per hour.
 wrote the ablation the award asks for.
 
 **Symptom.** `eval/agent_ablation.py` on 200 genuinely clean captures degraded by
-additive sensor noise: the loop **auto-passed 196 of 200**. A safety inspection
+additive sensor noise: the loop **auto-passed 200 of 200**. A safety inspection
 saying "no defect" on a noisy frame is the failure mode that matters most.
 
 **Root cause.** The quality gate checked sharpness, glare, blown highlights and
@@ -424,7 +424,7 @@ inflate it). Threshold derived from 240 real captures
 Clean max (10.286) sits below noisy p05 (11.305), so `NOISE_MAX = 10.8` separates
 them cleanly.
 
-**Result. False accepts under noise: 196/200 -> 0/200.** The same calibration
+**Result. False accepts under noise: 200/200 -> 0/200.** The same calibration
 pass relaxed the glare and blown-highlight limits to clean p99 (0.05 / 0.035),
 removing spurious refusals on good captures.
 

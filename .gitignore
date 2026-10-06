@@ -6,6 +6,9 @@ venv/
 bench_result*.json
 bench_local*.json
 bench/results/*.json
+# ...but the curated comparison IS evidence cited by docs/REPORT.md (C9) and
+# checked by eval/verify_report_claims.py, so it stays tracked.
+!bench/results/comparison-*.json
 eval/.neu_cls_features*.npz
 *.mp4
 node_modules/
