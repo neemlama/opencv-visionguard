@@ -22,6 +22,7 @@ Instances are driven over Systems Manager (no SSH keypair) and are always
 terminated in a finally block.
 """
 import argparse
+import base64
 import json
 import re
 import statistics
@@ -36,7 +37,7 @@ BENCH_REMOTE = "/tmp/bench.py"
 REMOTE_SAMPLES = "/tmp/samples"
 OUT_DIR = Path(__file__).resolve().parents[1] / "bench" / "results"
 BENCH_LOCAL = Path(__file__).resolve().parents[1] / "bench" / "bench.py"
-SAMPLES_LOCAL = Path(__file__).resolve().parents[1] / "backend" / "app" / "make_samples.py"
+NEU_SAMPLES = Path(__file__).resolve().parents[1] / "samples" / "neu"
 
 # COOL install layout differs by AMI generation. The Graviton2 image
 # (ami-03175684e1b021dda) uses /opt/opencv_install/{lib,lib/python3.12/site-packages}
@@ -295,15 +296,28 @@ def wait_for_ssm(ssm, iid, arm_name, attempts=60):
     return False
 
 
-def send_and_wait(ssm, iid, commands, timeout=1200):
-    cid = ssm.send_command(
-        InstanceIds=[iid],
-        DocumentName="AWS-RunShellScript",
-        Parameters={"commands": commands},
-    )["Command"]["CommandId"]
-    print(f"    command {cid} dispatched")
-    terminal = {"Success", "Cancelled", "Failed", "TimedOut", "Delivery Timed Out",
-                "Execution Timed Out", "Undeliverable"}
+TERMINAL = {"Success", "Cancelled", "Failed", "TimedOut", "Delivery Timed Out",
+            "Execution Timed Out", "Undeliverable"}
+# SendCommand rejects a request whose parameters exceed 97KB. bench.py plus the
+# inline base64 NEU samples overflow that, so commands are dispatched in chunks.
+MAX_COMMAND_BYTES = 80 * 1024
+
+
+def chunk_commands(commands, limit=MAX_COMMAND_BYTES):
+    chunks, cur, size = [], [], 0
+    for c in commands:
+        n = len(c) + 1
+        if cur and size + n > limit:
+            chunks.append(cur)
+            cur, size = [], 0
+        cur.append(c)
+        size += n
+    if cur:
+        chunks.append(cur)
+    return chunks
+
+
+def _await_command(ssm, cid, iid, timeout):
     deadline = time.time() + timeout
     while time.time() < deadline:
         # get_command_invocation takes no Filters in this API version, so poll
@@ -314,16 +328,34 @@ def send_and_wait(ssm, iid, commands, timeout=1200):
             CommandId=cid, InstanceId=iid
         )["CommandInvocations"]
         if not invocations:
-            time.sleep(10)
+            time.sleep(5)
             continue
         status = invocations[0]["Status"]
-        if status in terminal:
+        if status in TERMINAL:
             out = ssm.get_command_invocation(CommandId=cid, InstanceId=iid)
             return out["Status"], out.get("StandardOutputContent", ""), out.get(
                 "StandardErrorContent", ""
             )
-        time.sleep(10)
-    raise SystemExit(f"command timed out on {iid}")
+        time.sleep(5)
+    raise SystemExit(f"command {cid} timed out on {iid}")
+
+
+def send_and_wait(ssm, iid, commands, timeout=1200):
+    """Dispatch in chunks, concatenating stdout so markers survive."""
+    stdout, stderr, status = "", "", "Success"
+    for i, batch in enumerate(chunk_commands(commands), 1):
+        cid = ssm.send_command(
+            InstanceIds=[iid],
+            DocumentName="AWS-RunShellScript",
+            Parameters={"commands": batch},
+        )["Command"]["CommandId"]
+        print(f"    chunk {i}/{len(chunk_commands(commands))} ({sum(len(c) for c in batch) // 1024} KB)")
+        status, out, err = _await_command(ssm, cid, iid, timeout)
+        stdout += out
+        stderr += err
+        if status != "Success":
+            break
+    return status, stdout, stderr
 
 
 def run_arm(region, arm, profile_arn, candidates, usd_per_hour, volume_size=None,
@@ -338,14 +370,18 @@ def run_arm(region, arm, profile_arn, candidates, usd_per_hour, volume_size=None
             return None
 
         src = BENCH_LOCAL.read_text()
-        gen = SAMPLES_LOCAL.read_text()
-        # Samples are regenerated on the instance rather than uploaded: SSM
-        # commands are size-limited, and the generator is seeded, so every arm
-        # gets byte-identical inputs while still measuring real decode work.
-        cmds = [
-            f"cat > {BENCH_REMOTE} <<'EOFBENCH'\n{src}\nEOFBENCH",
-            f"cat > /tmp/make_samples.py <<'EOFGEN'\n{gen}\nEOFGEN",
-        ]
+        # Samples: real NEU photographs shipped inline as base64, one SSM command
+        # per image. The pipeline measures image analysis, so synthetic images
+        # would misreport it, and AWS-RunShellScript caps a single command's size,
+        # hence one command per file. They are byte-identical across every arm, so
+        # the comparison stays controlled.
+        cmds = [f"cat > {BENCH_REMOTE} <<'EOFBENCH'\n{src}\nEOFBENCH",
+                f"mkdir -p {REMOTE_SAMPLES}"]
+        for img_path in sorted(NEU_SAMPLES.glob("*.jpg")):
+            b64 = base64.b64encode(img_path.read_bytes()).decode("ascii")
+            cmds.append(
+                f"echo {b64} | base64 -d > {REMOTE_SAMPLES}/{img_path.name}"
+            )
         if arm["cool"]:
             cmds.append(
                 "echo '--- COOL layout ---'; "
@@ -358,15 +394,11 @@ def run_arm(region, arm, profile_arn, candidates, usd_per_hour, volume_size=None
                 "echo COOLCHECK_EXIT=$?; cat /tmp/coolcheck.log"
             )
             runner = f"python3.12 {BENCH_REMOTE}"
-            gen_runner = f"python3.12 /tmp/make_samples.py {REMOTE_SAMPLES}"
             prefix = COOL_ENV
         else:
             cmds.append(diy_install_cmd(opencv_version))
             runner = f"/opt/benchenv/bin/python {BENCH_REMOTE}"
-            gen_runner = f"/opt/benchenv/bin/python /tmp/make_samples.py {REMOTE_SAMPLES}"
             prefix = ""
-        cmds.append(f"mkdir -p {REMOTE_SAMPLES}")
-        cmds.append(f"{prefix}{gen_runner} > /tmp/gen.log 2>&1; echo GEN_EXIT=$?")
         # Capture the workload exit code explicitly: a bare `cat` at the end would
         # return 0 and make SSM report Success even when the benchmark failed.
         cmds.append(
@@ -377,7 +409,6 @@ def run_arm(region, arm, profile_arn, candidates, usd_per_hour, volume_size=None
         cmds.append("echo __BENCH_JSON_BEGIN__")
         cmds.append("cat /tmp/bench_result.json 2>/dev/null || echo NO_RESULT_FILE")
         cmds.append("echo __BENCH_JSON_END__")
-        cmds.append("echo '--- gen.log ---'; tail -5 /tmp/gen.log")
         cmds.append("echo '--- bench stdout ---'; tail -25 /tmp/bench_stdout.log")
 
         st, out, err = send_and_wait(ssm, iid, cmds)

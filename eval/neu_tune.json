@@ -1,0 +1,4142 @@
+[
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.2753,
+    "recall": 0.1448,
+    "f1": 0.1897,
+    "macro_f1": 0.1875,
+    "per_class_f1": {
+      "crazing": 0.025,
+      "inclusion": 0.155,
+      "patches": 0.043,
+      "pitted_surface": 0.195,
+      "rolled-in_scale": 0.362,
+      "scratches": 0.345
+    },
+    "tp": 87,
+    "fp": 229,
+    "fn": 514
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.3586,
+    "recall": 0.1181,
+    "f1": 0.1777,
+    "macro_f1": 0.1771,
+    "per_class_f1": {
+      "crazing": 0.03,
+      "inclusion": 0.129,
+      "patches": 0.033,
+      "pitted_surface": 0.168,
+      "rolled-in_scale": 0.338,
+      "scratches": 0.364
+    },
+    "tp": 71,
+    "fp": 127,
+    "fn": 530
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.2794,
+    "recall": 0.1265,
+    "f1": 0.1741,
+    "macro_f1": 0.1769,
+    "per_class_f1": {
+      "crazing": 0.047,
+      "inclusion": 0.14,
+      "patches": 0.032,
+      "pitted_surface": 0.207,
+      "rolled-in_scale": 0.297,
+      "scratches": 0.338
+    },
+    "tp": 76,
+    "fp": 196,
+    "fn": 525
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.1939,
+    "recall": 0.1381,
+    "f1": 0.1613,
+    "macro_f1": 0.1734,
+    "per_class_f1": {
+      "crazing": 0.04,
+      "inclusion": 0.23,
+      "patches": 0.098,
+      "pitted_surface": 0.144,
+      "rolled-in_scale": 0.196,
+      "scratches": 0.331
+    },
+    "tp": 83,
+    "fp": 345,
+    "fn": 518
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.2168,
+    "recall": 0.1248,
+    "f1": 0.1584,
+    "macro_f1": 0.1725,
+    "per_class_f1": {
+      "crazing": 0.018,
+      "inclusion": 0.14,
+      "patches": 0.101,
+      "pitted_surface": 0.185,
+      "rolled-in_scale": 0.278,
+      "scratches": 0.313
+    },
+    "tp": 75,
+    "fp": 271,
+    "fn": 526
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.3105,
+    "recall": 0.1131,
+    "f1": 0.1659,
+    "macro_f1": 0.1689,
+    "per_class_f1": {
+      "crazing": 0.061,
+      "inclusion": 0.213,
+      "patches": 0.058,
+      "pitted_surface": 0.137,
+      "rolled-in_scale": 0.185,
+      "scratches": 0.359
+    },
+    "tp": 68,
+    "fp": 151,
+    "fn": 533
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.367,
+    "recall": 0.1148,
+    "f1": 0.1749,
+    "macro_f1": 0.1678,
+    "per_class_f1": {
+      "crazing": 0.034,
+      "inclusion": 0.15,
+      "patches": 0.0,
+      "pitted_surface": 0.177,
+      "rolled-in_scale": 0.314,
+      "scratches": 0.331
+    },
+    "tp": 69,
+    "fp": 119,
+    "fn": 532
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.2641,
+    "recall": 0.1248,
+    "f1": 0.1695,
+    "macro_f1": 0.1649,
+    "per_class_f1": {
+      "crazing": 0.026,
+      "inclusion": 0.147,
+      "patches": 0.0,
+      "pitted_surface": 0.22,
+      "rolled-in_scale": 0.333,
+      "scratches": 0.263
+    },
+    "tp": 75,
+    "fp": 209,
+    "fn": 526
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.2696,
+    "recall": 0.1314,
+    "f1": 0.1767,
+    "macro_f1": 0.1646,
+    "per_class_f1": {
+      "crazing": 0.032,
+      "inclusion": 0.15,
+      "patches": 0.0,
+      "pitted_surface": 0.163,
+      "rolled-in_scale": 0.333,
+      "scratches": 0.31
+    },
+    "tp": 79,
+    "fp": 214,
+    "fn": 522
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.3575,
+    "recall": 0.1065,
+    "f1": 0.1641,
+    "macro_f1": 0.1636,
+    "per_class_f1": {
+      "crazing": 0.031,
+      "inclusion": 0.147,
+      "patches": 0.0,
+      "pitted_surface": 0.245,
+      "rolled-in_scale": 0.301,
+      "scratches": 0.258
+    },
+    "tp": 64,
+    "fp": 115,
+    "fn": 537
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.335,
+    "recall": 0.1115,
+    "f1": 0.1673,
+    "macro_f1": 0.1625,
+    "per_class_f1": {
+      "crazing": 0.016,
+      "inclusion": 0.168,
+      "patches": 0.017,
+      "pitted_surface": 0.206,
+      "rolled-in_scale": 0.255,
+      "scratches": 0.313
+    },
+    "tp": 67,
+    "fp": 133,
+    "fn": 534
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.234,
+    "recall": 0.1281,
+    "f1": 0.1656,
+    "macro_f1": 0.1579,
+    "per_class_f1": {
+      "crazing": 0.014,
+      "inclusion": 0.175,
+      "patches": 0.047,
+      "pitted_surface": 0.176,
+      "rolled-in_scale": 0.246,
+      "scratches": 0.29
+    },
+    "tp": 77,
+    "fp": 252,
+    "fn": 524
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.1856,
+    "recall": 0.1115,
+    "f1": 0.1393,
+    "macro_f1": 0.157,
+    "per_class_f1": {
+      "crazing": 0.049,
+      "inclusion": 0.108,
+      "patches": 0.013,
+      "pitted_surface": 0.18,
+      "rolled-in_scale": 0.216,
+      "scratches": 0.376
+    },
+    "tp": 67,
+    "fp": 294,
+    "fn": 534
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.3105,
+    "recall": 0.0982,
+    "f1": 0.1492,
+    "macro_f1": 0.1565,
+    "per_class_f1": {
+      "crazing": 0.024,
+      "inclusion": 0.14,
+      "patches": 0.033,
+      "pitted_surface": 0.2,
+      "rolled-in_scale": 0.233,
+      "scratches": 0.308
+    },
+    "tp": 59,
+    "fp": 131,
+    "fn": 542
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.1593,
+    "recall": 0.1198,
+    "f1": 0.1368,
+    "macro_f1": 0.1561,
+    "per_class_f1": {
+      "crazing": 0.057,
+      "inclusion": 0.114,
+      "patches": 0.062,
+      "pitted_surface": 0.117,
+      "rolled-in_scale": 0.163,
+      "scratches": 0.423
+    },
+    "tp": 72,
+    "fp": 380,
+    "fn": 529
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.1766,
+    "recall": 0.1381,
+    "f1": 0.155,
+    "macro_f1": 0.1554,
+    "per_class_f1": {
+      "crazing": 0.037,
+      "inclusion": 0.13,
+      "patches": 0.042,
+      "pitted_surface": 0.17,
+      "rolled-in_scale": 0.246,
+      "scratches": 0.308
+    },
+    "tp": 83,
+    "fp": 387,
+    "fn": 518
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.1576,
+    "recall": 0.1631,
+    "f1": 0.1603,
+    "macro_f1": 0.1553,
+    "per_class_f1": {
+      "crazing": 0.02,
+      "inclusion": 0.198,
+      "patches": 0.047,
+      "pitted_surface": 0.129,
+      "rolled-in_scale": 0.239,
+      "scratches": 0.299
+    },
+    "tp": 98,
+    "fp": 524,
+    "fn": 503
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.3598,
+    "recall": 0.0982,
+    "f1": 0.1542,
+    "macro_f1": 0.1546,
+    "per_class_f1": {
+      "crazing": 0.045,
+      "inclusion": 0.103,
+      "patches": 0.017,
+      "pitted_surface": 0.137,
+      "rolled-in_scale": 0.266,
+      "scratches": 0.359
+    },
+    "tp": 59,
+    "fp": 105,
+    "fn": 542
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.2322,
+    "recall": 0.1032,
+    "f1": 0.1429,
+    "macro_f1": 0.1538,
+    "per_class_f1": {
+      "crazing": 0.058,
+      "inclusion": 0.061,
+      "patches": 0.013,
+      "pitted_surface": 0.171,
+      "rolled-in_scale": 0.201,
+      "scratches": 0.418
+    },
+    "tp": 62,
+    "fp": 205,
+    "fn": 539
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.1707,
+    "recall": 0.1298,
+    "f1": 0.1474,
+    "macro_f1": 0.1512,
+    "per_class_f1": {
+      "crazing": 0.041,
+      "inclusion": 0.203,
+      "patches": 0.136,
+      "pitted_surface": 0.11,
+      "rolled-in_scale": 0.208,
+      "scratches": 0.209
+    },
+    "tp": 78,
+    "fp": 379,
+    "fn": 523
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.3033,
+    "recall": 0.1065,
+    "f1": 0.1576,
+    "macro_f1": 0.1504,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.159,
+      "patches": 0.035,
+      "pitted_surface": 0.212,
+      "rolled-in_scale": 0.192,
+      "scratches": 0.304
+    },
+    "tp": 64,
+    "fp": 147,
+    "fn": 537
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.3005,
+    "recall": 0.1015,
+    "f1": 0.1517,
+    "macro_f1": 0.147,
+    "per_class_f1": {
+      "crazing": 0.05,
+      "inclusion": 0.178,
+      "patches": 0.052,
+      "pitted_surface": 0.206,
+      "rolled-in_scale": 0.233,
+      "scratches": 0.164
+    },
+    "tp": 61,
+    "fp": 142,
+    "fn": 540
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.2098,
+    "recall": 0.0998,
+    "f1": 0.1353,
+    "macro_f1": 0.1449,
+    "per_class_f1": {
+      "crazing": 0.079,
+      "inclusion": 0.077,
+      "patches": 0.078,
+      "pitted_surface": 0.18,
+      "rolled-in_scale": 0.178,
+      "scratches": 0.277
+    },
+    "tp": 60,
+    "fp": 226,
+    "fn": 541
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.1475,
+    "recall": 0.1215,
+    "f1": 0.1332,
+    "macro_f1": 0.1436,
+    "per_class_f1": {
+      "crazing": 0.042,
+      "inclusion": 0.056,
+      "patches": 0.044,
+      "pitted_surface": 0.161,
+      "rolled-in_scale": 0.196,
+      "scratches": 0.364
+    },
+    "tp": 73,
+    "fp": 422,
+    "fn": 528
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.1704,
+    "recall": 0.1514,
+    "f1": 0.1604,
+    "macro_f1": 0.1427,
+    "per_class_f1": {
+      "crazing": 0.029,
+      "inclusion": 0.199,
+      "patches": 0.0,
+      "pitted_surface": 0.118,
+      "rolled-in_scale": 0.226,
+      "scratches": 0.284
+    },
+    "tp": 91,
+    "fp": 443,
+    "fn": 510
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.2554,
+    "recall": 0.0982,
+    "f1": 0.1418,
+    "macro_f1": 0.1411,
+    "per_class_f1": {
+      "crazing": 0.048,
+      "inclusion": 0.216,
+      "patches": 0.079,
+      "pitted_surface": 0.132,
+      "rolled-in_scale": 0.146,
+      "scratches": 0.226
+    },
+    "tp": 59,
+    "fp": 172,
+    "fn": 542
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.3448,
+    "recall": 0.0832,
+    "f1": 0.134,
+    "macro_f1": 0.1402,
+    "per_class_f1": {
+      "crazing": 0.072,
+      "inclusion": 0.027,
+      "patches": 0.015,
+      "pitted_surface": 0.126,
+      "rolled-in_scale": 0.168,
+      "scratches": 0.432
+    },
+    "tp": 50,
+    "fp": 95,
+    "fn": 551
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.0985,
+    "recall": 0.1564,
+    "f1": 0.1209,
+    "macro_f1": 0.1389,
+    "per_class_f1": {
+      "crazing": 0.023,
+      "inclusion": 0.249,
+      "patches": 0.081,
+      "pitted_surface": 0.097,
+      "rolled-in_scale": 0.119,
+      "scratches": 0.265
+    },
+    "tp": 94,
+    "fp": 860,
+    "fn": 507
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.1667,
+    "recall": 0.0998,
+    "f1": 0.1249,
+    "macro_f1": 0.1387,
+    "per_class_f1": {
+      "crazing": 0.008,
+      "inclusion": 0.147,
+      "patches": 0.111,
+      "pitted_surface": 0.133,
+      "rolled-in_scale": 0.109,
+      "scratches": 0.324
+    },
+    "tp": 60,
+    "fp": 300,
+    "fn": 541
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.2006,
+    "recall": 0.1198,
+    "f1": 0.15,
+    "macro_f1": 0.1386,
+    "per_class_f1": {
+      "crazing": 0.043,
+      "inclusion": 0.178,
+      "patches": 0.05,
+      "pitted_surface": 0.159,
+      "rolled-in_scale": 0.23,
+      "scratches": 0.171
+    },
+    "tp": 72,
+    "fp": 287,
+    "fn": 529
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.2796,
+    "recall": 0.0865,
+    "f1": 0.1321,
+    "macro_f1": 0.1384,
+    "per_class_f1": {
+      "crazing": 0.071,
+      "inclusion": 0.079,
+      "patches": 0.014,
+      "pitted_surface": 0.087,
+      "rolled-in_scale": 0.185,
+      "scratches": 0.394
+    },
+    "tp": 52,
+    "fp": 134,
+    "fn": 549
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.2117,
+    "recall": 0.1148,
+    "f1": 0.1489,
+    "macro_f1": 0.1377,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.157,
+      "patches": 0.033,
+      "pitted_surface": 0.18,
+      "rolled-in_scale": 0.184,
+      "scratches": 0.273
+    },
+    "tp": 69,
+    "fp": 257,
+    "fn": 532
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.2696,
+    "recall": 0.0915,
+    "f1": 0.1366,
+    "macro_f1": 0.1375,
+    "per_class_f1": {
+      "crazing": 0.093,
+      "inclusion": 0.073,
+      "patches": 0.081,
+      "pitted_surface": 0.065,
+      "rolled-in_scale": 0.06,
+      "scratches": 0.453
+    },
+    "tp": 55,
+    "fp": 149,
+    "fn": 546
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.1029,
+    "recall": 0.1248,
+    "f1": 0.1128,
+    "macro_f1": 0.1366,
+    "per_class_f1": {
+      "crazing": 0.029,
+      "inclusion": 0.099,
+      "patches": 0.028,
+      "pitted_surface": 0.141,
+      "rolled-in_scale": 0.187,
+      "scratches": 0.335
+    },
+    "tp": 75,
+    "fp": 654,
+    "fn": 526
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.0827,
+    "recall": 0.1431,
+    "f1": 0.1048,
+    "macro_f1": 0.1362,
+    "per_class_f1": {
+      "crazing": 0.03,
+      "inclusion": 0.166,
+      "patches": 0.057,
+      "pitted_surface": 0.091,
+      "rolled-in_scale": 0.119,
+      "scratches": 0.355
+    },
+    "tp": 86,
+    "fp": 954,
+    "fn": 515
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.1061,
+    "recall": 0.1281,
+    "f1": 0.1161,
+    "macro_f1": 0.131,
+    "per_class_f1": {
+      "crazing": 0.011,
+      "inclusion": 0.127,
+      "patches": 0.08,
+      "pitted_surface": 0.144,
+      "rolled-in_scale": 0.172,
+      "scratches": 0.251
+    },
+    "tp": 77,
+    "fp": 649,
+    "fn": 524
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.1461,
+    "recall": 0.1281,
+    "f1": 0.1365,
+    "macro_f1": 0.1294,
+    "per_class_f1": {
+      "crazing": 0.02,
+      "inclusion": 0.136,
+      "patches": 0.0,
+      "pitted_surface": 0.186,
+      "rolled-in_scale": 0.218,
+      "scratches": 0.217
+    },
+    "tp": 77,
+    "fp": 450,
+    "fn": 524
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.1465,
+    "recall": 0.0948,
+    "f1": 0.1152,
+    "macro_f1": 0.1275,
+    "per_class_f1": {
+      "crazing": 0.085,
+      "inclusion": 0.062,
+      "patches": 0.03,
+      "pitted_surface": 0.055,
+      "rolled-in_scale": 0.079,
+      "scratches": 0.455
+    },
+    "tp": 57,
+    "fp": 332,
+    "fn": 544
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.1176,
+    "recall": 0.1098,
+    "f1": 0.1136,
+    "macro_f1": 0.1267,
+    "per_class_f1": {
+      "crazing": 0.052,
+      "inclusion": 0.08,
+      "patches": 0.088,
+      "pitted_surface": 0.148,
+      "rolled-in_scale": 0.151,
+      "scratches": 0.242
+    },
+    "tp": 66,
+    "fp": 495,
+    "fn": 535
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.1215,
+    "recall": 0.1364,
+    "f1": 0.1285,
+    "macro_f1": 0.123,
+    "per_class_f1": {
+      "crazing": 0.011,
+      "inclusion": 0.177,
+      "patches": 0.039,
+      "pitted_surface": 0.116,
+      "rolled-in_scale": 0.137,
+      "scratches": 0.257
+    },
+    "tp": 82,
+    "fp": 593,
+    "fn": 519
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.2848,
+    "recall": 0.0749,
+    "f1": 0.1186,
+    "macro_f1": 0.1211,
+    "per_class_f1": {
+      "crazing": 0.104,
+      "inclusion": 0.068,
+      "patches": 0.05,
+      "pitted_surface": 0.109,
+      "rolled-in_scale": 0.136,
+      "scratches": 0.26
+    },
+    "tp": 45,
+    "fp": 113,
+    "fn": 556
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.1585,
+    "recall": 0.0865,
+    "f1": 0.1119,
+    "macro_f1": 0.1209,
+    "per_class_f1": {
+      "crazing": 0.031,
+      "inclusion": 0.061,
+      "patches": 0.091,
+      "pitted_surface": 0.103,
+      "rolled-in_scale": 0.034,
+      "scratches": 0.406
+    },
+    "tp": 52,
+    "fp": 276,
+    "fn": 549
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.0977,
+    "recall": 0.1398,
+    "f1": 0.115,
+    "macro_f1": 0.1158,
+    "per_class_f1": {
+      "crazing": 0.028,
+      "inclusion": 0.11,
+      "patches": 0.034,
+      "pitted_surface": 0.115,
+      "rolled-in_scale": 0.151,
+      "scratches": 0.257
+    },
+    "tp": 84,
+    "fp": 776,
+    "fn": 517
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.0801,
+    "recall": 0.1082,
+    "f1": 0.0921,
+    "macro_f1": 0.1157,
+    "per_class_f1": {
+      "crazing": 0.055,
+      "inclusion": 0.056,
+      "patches": 0.026,
+      "pitted_surface": 0.085,
+      "rolled-in_scale": 0.082,
+      "scratches": 0.39
+    },
+    "tp": 65,
+    "fp": 746,
+    "fn": 536
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.1319,
+    "recall": 0.1198,
+    "f1": 0.1255,
+    "macro_f1": 0.1155,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.148,
+      "patches": 0.029,
+      "pitted_surface": 0.13,
+      "rolled-in_scale": 0.123,
+      "scratches": 0.263
+    },
+    "tp": 72,
+    "fp": 474,
+    "fn": 529
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.0819,
+    "recall": 0.1448,
+    "f1": 0.1046,
+    "macro_f1": 0.1148,
+    "per_class_f1": {
+      "crazing": 0.024,
+      "inclusion": 0.185,
+      "patches": 0.1,
+      "pitted_surface": 0.072,
+      "rolled-in_scale": 0.104,
+      "scratches": 0.204
+    },
+    "tp": 87,
+    "fp": 975,
+    "fn": 514
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.2419,
+    "recall": 0.0749,
+    "f1": 0.1144,
+    "macro_f1": 0.1122,
+    "per_class_f1": {
+      "crazing": 0.116,
+      "inclusion": 0.027,
+      "patches": 0.037,
+      "pitted_surface": 0.044,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.448
+    },
+    "tp": 45,
+    "fp": 141,
+    "fn": 556
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.1038,
+    "recall": 0.1364,
+    "f1": 0.1179,
+    "macro_f1": 0.1121,
+    "per_class_f1": {
+      "crazing": 0.033,
+      "inclusion": 0.162,
+      "patches": 0.041,
+      "pitted_surface": 0.095,
+      "rolled-in_scale": 0.123,
+      "scratches": 0.219
+    },
+    "tp": 82,
+    "fp": 708,
+    "fn": 519
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.0842,
+    "recall": 0.1681,
+    "f1": 0.1122,
+    "macro_f1": 0.1116,
+    "per_class_f1": {
+      "crazing": 0.015,
+      "inclusion": 0.146,
+      "patches": 0.037,
+      "pitted_surface": 0.078,
+      "rolled-in_scale": 0.141,
+      "scratches": 0.253
+    },
+    "tp": 101,
+    "fp": 1098,
+    "fn": 500
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.102,
+    "recall": 0.1547,
+    "f1": 0.1229,
+    "macro_f1": 0.1103,
+    "per_class_f1": {
+      "crazing": 0.025,
+      "inclusion": 0.154,
+      "patches": 0.0,
+      "pitted_surface": 0.085,
+      "rolled-in_scale": 0.152,
+      "scratches": 0.246
+    },
+    "tp": 93,
+    "fp": 819,
+    "fn": 508
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.084,
+    "recall": 0.1215,
+    "f1": 0.0993,
+    "macro_f1": 0.1087,
+    "per_class_f1": {
+      "crazing": 0.03,
+      "inclusion": 0.051,
+      "patches": 0.034,
+      "pitted_surface": 0.11,
+      "rolled-in_scale": 0.125,
+      "scratches": 0.303
+    },
+    "tp": 73,
+    "fp": 796,
+    "fn": 528
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.1438,
+    "recall": 0.0715,
+    "f1": 0.0956,
+    "macro_f1": 0.1081,
+    "per_class_f1": {
+      "crazing": 0.043,
+      "inclusion": 0.014,
+      "patches": 0.013,
+      "pitted_surface": 0.096,
+      "rolled-in_scale": 0.127,
+      "scratches": 0.357
+    },
+    "tp": 43,
+    "fp": 256,
+    "fn": 558
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.3617,
+    "recall": 0.0849,
+    "f1": 0.1375,
+    "macro_f1": 0.1081,
+    "per_class_f1": {
+      "crazing": 0.019,
+      "inclusion": 0.0,
+      "patches": 0.258,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.371
+    },
+    "tp": 51,
+    "fp": 90,
+    "fn": 550
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.4242,
+    "recall": 0.0699,
+    "f1": 0.12,
+    "macro_f1": 0.1077,
+    "per_class_f1": {
+      "crazing": 0.019,
+      "inclusion": 0.0,
+      "patches": 0.176,
+      "pitted_surface": 0.051,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.4
+    },
+    "tp": 42,
+    "fp": 57,
+    "fn": 559
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.1503,
+    "recall": 0.0715,
+    "f1": 0.097,
+    "macro_f1": 0.1072,
+    "per_class_f1": {
+      "crazing": 0.046,
+      "inclusion": 0.014,
+      "patches": 0.041,
+      "pitted_surface": 0.065,
+      "rolled-in_scale": 0.037,
+      "scratches": 0.441
+    },
+    "tp": 43,
+    "fp": 243,
+    "fn": 558
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.2629,
+    "recall": 0.0765,
+    "f1": 0.1186,
+    "macro_f1": 0.1054,
+    "per_class_f1": {
+      "crazing": 0.017,
+      "inclusion": 0.0,
+      "patches": 0.16,
+      "pitted_surface": 0.049,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.406
+    },
+    "tp": 46,
+    "fp": 129,
+    "fn": 555
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.1424,
+    "recall": 0.0699,
+    "f1": 0.0938,
+    "macro_f1": 0.1053,
+    "per_class_f1": {
+      "crazing": 0.018,
+      "inclusion": 0.065,
+      "patches": 0.06,
+      "pitted_surface": 0.121,
+      "rolled-in_scale": 0.082,
+      "scratches": 0.286
+    },
+    "tp": 42,
+    "fp": 253,
+    "fn": 559
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.0658,
+    "recall": 0.1015,
+    "f1": 0.0798,
+    "macro_f1": 0.1052,
+    "per_class_f1": {
+      "crazing": 0.012,
+      "inclusion": 0.065,
+      "patches": 0.077,
+      "pitted_surface": 0.077,
+      "rolled-in_scale": 0.061,
+      "scratches": 0.34
+    },
+    "tp": 61,
+    "fp": 866,
+    "fn": 540
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.211,
+    "recall": 0.0765,
+    "f1": 0.1123,
+    "macro_f1": 0.1042,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.174,
+      "patches": 0.0,
+      "pitted_surface": 0.2,
+      "rolled-in_scale": 0.075,
+      "scratches": 0.176
+    },
+    "tp": 46,
+    "fp": 172,
+    "fn": 555
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.0856,
+    "recall": 0.0849,
+    "f1": 0.0852,
+    "macro_f1": 0.1036,
+    "per_class_f1": {
+      "crazing": 0.028,
+      "inclusion": 0.022,
+      "patches": 0.03,
+      "pitted_surface": 0.104,
+      "rolled-in_scale": 0.122,
+      "scratches": 0.315
+    },
+    "tp": 51,
+    "fp": 545,
+    "fn": 550
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.4778,
+    "recall": 0.0715,
+    "f1": 0.1245,
+    "macro_f1": 0.1035,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.255,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.367
+    },
+    "tp": 43,
+    "fp": 47,
+    "fn": 558
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.0593,
+    "recall": 0.1032,
+    "f1": 0.0753,
+    "macro_f1": 0.1031,
+    "per_class_f1": {
+      "crazing": 0.003,
+      "inclusion": 0.114,
+      "patches": 0.068,
+      "pitted_surface": 0.093,
+      "rolled-in_scale": 0.076,
+      "scratches": 0.264
+    },
+    "tp": 62,
+    "fp": 983,
+    "fn": 539
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.1883,
+    "recall": 0.0749,
+    "f1": 0.1071,
+    "macro_f1": 0.1021,
+    "per_class_f1": {
+      "crazing": 0.095,
+      "inclusion": 0.014,
+      "patches": 0.094,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.409
+    },
+    "tp": 45,
+    "fp": 194,
+    "fn": 556
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.1625,
+    "recall": 0.0865,
+    "f1": 0.1129,
+    "macro_f1": 0.1013,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.164,
+      "patches": 0.0,
+      "pitted_surface": 0.168,
+      "rolled-in_scale": 0.101,
+      "scratches": 0.174
+    },
+    "tp": 52,
+    "fp": 268,
+    "fn": 549
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.2393,
+    "recall": 0.0649,
+    "f1": 0.1021,
+    "macro_f1": 0.1013,
+    "per_class_f1": {
+      "crazing": 0.063,
+      "inclusion": 0.0,
+      "patches": 0.049,
+      "pitted_surface": 0.048,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.448
+    },
+    "tp": 39,
+    "fp": 124,
+    "fn": 562
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.2817,
+    "recall": 0.0666,
+    "f1": 0.1077,
+    "macro_f1": 0.1012,
+    "per_class_f1": {
+      "crazing": 0.015,
+      "inclusion": 0.131,
+      "patches": 0.054,
+      "pitted_surface": 0.024,
+      "rolled-in_scale": 0.043,
+      "scratches": 0.341
+    },
+    "tp": 40,
+    "fp": 102,
+    "fn": 561
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.1444,
+    "recall": 0.0666,
+    "f1": 0.0911,
+    "macro_f1": 0.1007,
+    "per_class_f1": {
+      "crazing": 0.01,
+      "inclusion": 0.014,
+      "patches": 0.059,
+      "pitted_surface": 0.064,
+      "rolled-in_scale": 0.073,
+      "scratches": 0.385
+    },
+    "tp": 40,
+    "fp": 237,
+    "fn": 561
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.3095,
+    "recall": 0.0649,
+    "f1": 0.1073,
+    "macro_f1": 0.1,
+    "per_class_f1": {
+      "crazing": 0.076,
+      "inclusion": 0.0,
+      "patches": 0.108,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.417
+    },
+    "tp": 39,
+    "fp": 87,
+    "fn": 562
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.2139,
+    "recall": 0.0715,
+    "f1": 0.1072,
+    "macro_f1": 0.0996,
+    "per_class_f1": {
+      "crazing": 0.045,
+      "inclusion": 0.041,
+      "patches": 0.11,
+      "pitted_surface": 0.071,
+      "rolled-in_scale": 0.021,
+      "scratches": 0.31
+    },
+    "tp": 43,
+    "fp": 158,
+    "fn": 558
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.057,
+    "recall": 0.1265,
+    "f1": 0.0786,
+    "macro_f1": 0.0993,
+    "per_class_f1": {
+      "crazing": 0.02,
+      "inclusion": 0.085,
+      "patches": 0.02,
+      "pitted_surface": 0.091,
+      "rolled-in_scale": 0.11,
+      "scratches": 0.269
+    },
+    "tp": 76,
+    "fp": 1257,
+    "fn": 525
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.1527,
+    "recall": 0.0666,
+    "f1": 0.0927,
+    "macro_f1": 0.0986,
+    "per_class_f1": {
+      "crazing": 0.013,
+      "inclusion": 0.038,
+      "patches": 0.034,
+      "pitted_surface": 0.045,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.462
+    },
+    "tp": 40,
+    "fp": 222,
+    "fn": 561
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.292,
+    "recall": 0.0666,
+    "f1": 0.1084,
+    "macro_f1": 0.0982,
+    "per_class_f1": {
+      "crazing": 0.047,
+      "inclusion": 0.0,
+      "patches": 0.117,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.425
+    },
+    "tp": 40,
+    "fp": 97,
+    "fn": 561
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.0794,
+    "recall": 0.0749,
+    "f1": 0.0771,
+    "macro_f1": 0.0982,
+    "per_class_f1": {
+      "crazing": 0.029,
+      "inclusion": 0.013,
+      "patches": 0.031,
+      "pitted_surface": 0.064,
+      "rolled-in_scale": 0.04,
+      "scratches": 0.412
+    },
+    "tp": 45,
+    "fp": 522,
+    "fn": 556
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.5205,
+    "recall": 0.0632,
+    "f1": 0.1128,
+    "macro_f1": 0.0977,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.142,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.444
+    },
+    "tp": 38,
+    "fp": 35,
+    "fn": 563
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.0612,
+    "recall": 0.0799,
+    "f1": 0.0693,
+    "macro_f1": 0.0972,
+    "per_class_f1": {
+      "crazing": 0.005,
+      "inclusion": 0.048,
+      "patches": 0.026,
+      "pitted_surface": 0.05,
+      "rolled-in_scale": 0.062,
+      "scratches": 0.392
+    },
+    "tp": 48,
+    "fp": 736,
+    "fn": 553
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.1006,
+    "recall": 0.0865,
+    "f1": 0.093,
+    "macro_f1": 0.0971,
+    "per_class_f1": {
+      "crazing": 0.008,
+      "inclusion": 0.0,
+      "patches": 0.118,
+      "pitted_surface": 0.082,
+      "rolled-in_scale": 0.015,
+      "scratches": 0.359
+    },
+    "tp": 52,
+    "fp": 465,
+    "fn": 549
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.269,
+    "recall": 0.0649,
+    "f1": 0.1046,
+    "macro_f1": 0.0965,
+    "per_class_f1": {
+      "crazing": 0.032,
+      "inclusion": 0.0,
+      "patches": 0.124,
+      "pitted_surface": 0.024,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.4
+    },
+    "tp": 39,
+    "fp": 106,
+    "fn": 562
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.0834,
+    "recall": 0.1298,
+    "f1": 0.1016,
+    "macro_f1": 0.0959,
+    "per_class_f1": {
+      "crazing": 0.015,
+      "inclusion": 0.119,
+      "patches": 0.0,
+      "pitted_surface": 0.119,
+      "rolled-in_scale": 0.14,
+      "scratches": 0.183
+    },
+    "tp": 78,
+    "fp": 857,
+    "fn": 523
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.0673,
+    "recall": 0.1098,
+    "f1": 0.0834,
+    "macro_f1": 0.0955,
+    "per_class_f1": {
+      "crazing": 0.037,
+      "inclusion": 0.067,
+      "patches": 0.069,
+      "pitted_surface": 0.115,
+      "rolled-in_scale": 0.093,
+      "scratches": 0.193
+    },
+    "tp": 66,
+    "fp": 915,
+    "fn": 535
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.1959,
+    "recall": 0.0632,
+    "f1": 0.0956,
+    "macro_f1": 0.0949,
+    "per_class_f1": {
+      "crazing": 0.064,
+      "inclusion": 0.0,
+      "patches": 0.041,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.464
+    },
+    "tp": 38,
+    "fp": 156,
+    "fn": 563
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.0406,
+    "recall": 0.1498,
+    "f1": 0.0638,
+    "macro_f1": 0.0948,
+    "per_class_f1": {
+      "crazing": 0.017,
+      "inclusion": 0.127,
+      "patches": 0.033,
+      "pitted_surface": 0.052,
+      "rolled-in_scale": 0.056,
+      "scratches": 0.283
+    },
+    "tp": 90,
+    "fp": 2129,
+    "fn": 511
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.25,
+    "recall": 0.0616,
+    "f1": 0.0988,
+    "macro_f1": 0.0948,
+    "per_class_f1": {
+      "crazing": 0.034,
+      "inclusion": 0.0,
+      "patches": 0.061,
+      "pitted_surface": 0.025,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.448
+    },
+    "tp": 37,
+    "fp": 111,
+    "fn": 564
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.0558,
+    "recall": 0.1298,
+    "f1": 0.0781,
+    "macro_f1": 0.094,
+    "per_class_f1": {
+      "crazing": 0.007,
+      "inclusion": 0.107,
+      "patches": 0.058,
+      "pitted_surface": 0.096,
+      "rolled-in_scale": 0.094,
+      "scratches": 0.202
+    },
+    "tp": 78,
+    "fp": 1319,
+    "fn": 523
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.1535,
+    "recall": 0.0616,
+    "f1": 0.0879,
+    "macro_f1": 0.0938,
+    "per_class_f1": {
+      "crazing": 0.023,
+      "inclusion": 0.013,
+      "patches": 0.028,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.041,
+      "scratches": 0.457
+    },
+    "tp": 37,
+    "fp": 204,
+    "fn": 564
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.3913,
+    "recall": 0.0599,
+    "f1": 0.1039,
+    "macro_f1": 0.0933,
+    "per_class_f1": {
+      "crazing": 0.019,
+      "inclusion": 0.0,
+      "patches": 0.124,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.417
+    },
+    "tp": 36,
+    "fp": 56,
+    "fn": 565
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.0917,
+    "recall": 0.0666,
+    "f1": 0.0771,
+    "macro_f1": 0.0922,
+    "per_class_f1": {
+      "crazing": 0.037,
+      "inclusion": 0.0,
+      "patches": 0.029,
+      "pitted_surface": 0.019,
+      "rolled-in_scale": 0.019,
+      "scratches": 0.45
+    },
+    "tp": 40,
+    "fp": 396,
+    "fn": 561
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.3365,
+    "recall": 0.0582,
+    "f1": 0.0993,
+    "macro_f1": 0.0917,
+    "per_class_f1": {
+      "crazing": 0.018,
+      "inclusion": 0.0,
+      "patches": 0.107,
+      "pitted_surface": 0.025,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.4
+    },
+    "tp": 35,
+    "fp": 69,
+    "fn": 566
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.0444,
+    "recall": 0.1597,
+    "f1": 0.0695,
+    "macro_f1": 0.0916,
+    "per_class_f1": {
+      "crazing": 0.013,
+      "inclusion": 0.183,
+      "patches": 0.047,
+      "pitted_surface": 0.053,
+      "rolled-in_scale": 0.05,
+      "scratches": 0.203
+    },
+    "tp": 96,
+    "fp": 2064,
+    "fn": 505
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.303,
+    "recall": 0.0666,
+    "f1": 0.1091,
+    "macro_f1": 0.0916,
+    "per_class_f1": {
+      "crazing": 0.019,
+      "inclusion": 0.0,
+      "patches": 0.162,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.368
+    },
+    "tp": 40,
+    "fp": 92,
+    "fn": 561
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.2857,
+    "recall": 0.0699,
+    "f1": 0.1123,
+    "macro_f1": 0.091,
+    "per_class_f1": {
+      "crazing": 0.018,
+      "inclusion": 0.028,
+      "patches": 0.195,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.305
+    },
+    "tp": 42,
+    "fp": 105,
+    "fn": 559
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.0625,
+    "recall": 0.0732,
+    "f1": 0.0674,
+    "macro_f1": 0.0905,
+    "per_class_f1": {
+      "crazing": 0.005,
+      "inclusion": 0.011,
+      "patches": 0.047,
+      "pitted_surface": 0.083,
+      "rolled-in_scale": 0.061,
+      "scratches": 0.336
+    },
+    "tp": 44,
+    "fp": 660,
+    "fn": 557
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.0929,
+    "recall": 0.0782,
+    "f1": 0.0849,
+    "macro_f1": 0.0905,
+    "per_class_f1": {
+      "crazing": 0.056,
+      "inclusion": 0.013,
+      "patches": 0.078,
+      "pitted_surface": 0.018,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.377
+    },
+    "tp": 47,
+    "fp": 459,
+    "fn": 554
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.0775,
+    "recall": 0.0849,
+    "f1": 0.081,
+    "macro_f1": 0.0904,
+    "per_class_f1": {
+      "crazing": 0.02,
+      "inclusion": 0.033,
+      "patches": 0.08,
+      "pitted_surface": 0.094,
+      "rolled-in_scale": 0.051,
+      "scratches": 0.263
+    },
+    "tp": 51,
+    "fp": 607,
+    "fn": 550
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.1878,
+    "recall": 0.0666,
+    "f1": 0.0983,
+    "macro_f1": 0.0901,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.1,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.441
+    },
+    "tp": 40,
+    "fp": 173,
+    "fn": 561
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.2238,
+    "recall": 0.0532,
+    "f1": 0.086,
+    "macro_f1": 0.09,
+    "per_class_f1": {
+      "crazing": 0.062,
+      "inclusion": 0.0,
+      "patches": 0.014,
+      "pitted_surface": 0.069,
+      "rolled-in_scale": 0.064,
+      "scratches": 0.331
+    },
+    "tp": 32,
+    "fp": 111,
+    "fn": 569
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.1404,
+    "recall": 0.0682,
+    "f1": 0.0918,
+    "macro_f1": 0.09,
+    "per_class_f1": {
+      "crazing": 0.021,
+      "inclusion": 0.0,
+      "patches": 0.108,
+      "pitted_surface": 0.02,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.391
+    },
+    "tp": 41,
+    "fp": 251,
+    "fn": 560
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.1888,
+    "recall": 0.0899,
+    "f1": 0.1218,
+    "macro_f1": 0.0896,
+    "per_class_f1": {
+      "crazing": 0.017,
+      "inclusion": 0.0,
+      "patches": 0.19,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.331
+    },
+    "tp": 54,
+    "fp": 232,
+    "fn": 547
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.0997,
+    "recall": 0.0649,
+    "f1": 0.0786,
+    "macro_f1": 0.0894,
+    "per_class_f1": {
+      "crazing": 0.021,
+      "inclusion": 0.0,
+      "patches": 0.038,
+      "pitted_surface": 0.021,
+      "rolled-in_scale": 0.038,
+      "scratches": 0.418
+    },
+    "tp": 39,
+    "fp": 352,
+    "fn": 562
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.5238,
+    "recall": 0.0549,
+    "f1": 0.0994,
+    "macro_f1": 0.0894,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.075,
+      "pitted_surface": 0.026,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.435
+    },
+    "tp": 33,
+    "fp": 30,
+    "fn": 568
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.2202,
+    "recall": 0.0616,
+    "f1": 0.0962,
+    "macro_f1": 0.089,
+    "per_class_f1": {
+      "crazing": 0.015,
+      "inclusion": 0.014,
+      "patches": 0.102,
+      "pitted_surface": 0.025,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.378
+    },
+    "tp": 37,
+    "fp": 131,
+    "fn": 564
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.0661,
+    "recall": 0.1398,
+    "f1": 0.0897,
+    "macro_f1": 0.0889,
+    "per_class_f1": {
+      "crazing": 0.009,
+      "inclusion": 0.143,
+      "patches": 0.031,
+      "pitted_surface": 0.066,
+      "rolled-in_scale": 0.083,
+      "scratches": 0.202
+    },
+    "tp": 84,
+    "fp": 1187,
+    "fn": 517
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.079,
+    "recall": 0.1215,
+    "f1": 0.0957,
+    "macro_f1": 0.0888,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.126,
+      "patches": 0.024,
+      "pitted_surface": 0.089,
+      "rolled-in_scale": 0.08,
+      "scratches": 0.213
+    },
+    "tp": 73,
+    "fp": 851,
+    "fn": 528
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.0822,
+    "recall": 0.0715,
+    "f1": 0.0765,
+    "macro_f1": 0.0887,
+    "per_class_f1": {
+      "crazing": 0.023,
+      "inclusion": 0.051,
+      "patches": 0.08,
+      "pitted_surface": 0.07,
+      "rolled-in_scale": 0.038,
+      "scratches": 0.27
+    },
+    "tp": 43,
+    "fp": 480,
+    "fn": 558
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.264,
+    "recall": 0.0549,
+    "f1": 0.0909,
+    "macro_f1": 0.0885,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.034,
+      "pitted_surface": 0.049,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.448
+    },
+    "tp": 33,
+    "fp": 92,
+    "fn": 568
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.0608,
+    "recall": 0.0749,
+    "f1": 0.0671,
+    "macro_f1": 0.0885,
+    "per_class_f1": {
+      "crazing": 0.009,
+      "inclusion": 0.057,
+      "patches": 0.061,
+      "pitted_surface": 0.094,
+      "rolled-in_scale": 0.063,
+      "scratches": 0.247
+    },
+    "tp": 45,
+    "fp": 695,
+    "fn": 556
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.3936,
+    "recall": 0.0616,
+    "f1": 0.1065,
+    "macro_f1": 0.0885,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.214,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.317
+    },
+    "tp": 37,
+    "fp": 57,
+    "fn": 564
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.0657,
+    "recall": 0.0632,
+    "f1": 0.0645,
+    "macro_f1": 0.0881,
+    "per_class_f1": {
+      "crazing": 0.012,
+      "inclusion": 0.013,
+      "patches": 0.019,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.045,
+      "scratches": 0.439
+    },
+    "tp": 38,
+    "fp": 540,
+    "fn": 563
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.4474,
+    "recall": 0.0566,
+    "f1": 0.1004,
+    "macro_f1": 0.0879,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.158,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.37
+    },
+    "tp": 34,
+    "fp": 42,
+    "fn": 567
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.2077,
+    "recall": 0.0632,
+    "f1": 0.0969,
+    "macro_f1": 0.0878,
+    "per_class_f1": {
+      "crazing": 0.04,
+      "inclusion": 0.041,
+      "patches": 0.128,
+      "pitted_surface": 0.025,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.292
+    },
+    "tp": 38,
+    "fp": 145,
+    "fn": 563
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.0456,
+    "recall": 0.1082,
+    "f1": 0.0642,
+    "macro_f1": 0.0877,
+    "per_class_f1": {
+      "crazing": 0.036,
+      "inclusion": 0.049,
+      "patches": 0.018,
+      "pitted_surface": 0.06,
+      "rolled-in_scale": 0.051,
+      "scratches": 0.312
+    },
+    "tp": 65,
+    "fp": 1359,
+    "fn": 536
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.32,
+    "recall": 0.0532,
+    "f1": 0.0913,
+    "macro_f1": 0.0873,
+    "per_class_f1": {
+      "crazing": 0.052,
+      "inclusion": 0.0,
+      "patches": 0.038,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.433
+    },
+    "tp": 32,
+    "fp": 68,
+    "fn": 569
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.4096,
+    "recall": 0.0566,
+    "f1": 0.0994,
+    "macro_f1": 0.0871,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.139,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.383
+    },
+    "tp": 34,
+    "fp": 49,
+    "fn": 567
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.2593,
+    "recall": 0.0582,
+    "f1": 0.0951,
+    "macro_f1": 0.0857,
+    "per_class_f1": {
+      "crazing": 0.017,
+      "inclusion": 0.0,
+      "patches": 0.107,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.39
+    },
+    "tp": 35,
+    "fp": 100,
+    "fn": 566
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.1411,
+    "recall": 0.0582,
+    "f1": 0.0824,
+    "macro_f1": 0.0855,
+    "per_class_f1": {
+      "crazing": 0.039,
+      "inclusion": 0.041,
+      "patches": 0.074,
+      "pitted_surface": 0.062,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.297
+    },
+    "tp": 35,
+    "fp": 213,
+    "fn": 566
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.3837,
+    "recall": 0.0549,
+    "f1": 0.0961,
+    "macro_f1": 0.0854,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.126,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.387
+    },
+    "tp": 33,
+    "fp": 53,
+    "fn": 568
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.0982,
+    "recall": 0.0915,
+    "f1": 0.0947,
+    "macro_f1": 0.0852,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.153,
+      "patches": 0.0,
+      "pitted_surface": 0.118,
+      "rolled-in_scale": 0.07,
+      "scratches": 0.17
+    },
+    "tp": 55,
+    "fp": 505,
+    "fn": 546
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.2319,
+    "recall": 0.0532,
+    "f1": 0.0866,
+    "macro_f1": 0.0852,
+    "per_class_f1": {
+      "crazing": 0.016,
+      "inclusion": 0.0,
+      "patches": 0.022,
+      "pitted_surface": 0.025,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.448
+    },
+    "tp": 32,
+    "fp": 106,
+    "fn": 569
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.3302,
+    "recall": 0.0582,
+    "f1": 0.099,
+    "macro_f1": 0.0852,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.124,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.387
+    },
+    "tp": 35,
+    "fp": 71,
+    "fn": 566
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.2759,
+    "recall": 0.0532,
+    "f1": 0.0893,
+    "macro_f1": 0.085,
+    "per_class_f1": {
+      "crazing": 0.034,
+      "inclusion": 0.0,
+      "patches": 0.024,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.452
+    },
+    "tp": 32,
+    "fp": 84,
+    "fn": 569
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 400,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.2672,
+    "recall": 0.0582,
+    "f1": 0.0956,
+    "macro_f1": 0.0848,
+    "per_class_f1": {
+      "crazing": 0.018,
+      "inclusion": 0.0,
+      "patches": 0.117,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.374
+    },
+    "tp": 35,
+    "fp": 96,
+    "fn": 566
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.0884,
+    "recall": 0.0749,
+    "f1": 0.0811,
+    "macro_f1": 0.0844,
+    "per_class_f1": {
+      "crazing": 0.02,
+      "inclusion": 0.039,
+      "patches": 0.112,
+      "pitted_surface": 0.055,
+      "rolled-in_scale": 0.03,
+      "scratches": 0.25
+    },
+    "tp": 45,
+    "fp": 464,
+    "fn": 556
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 400,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.2893,
+    "recall": 0.0582,
+    "f1": 0.097,
+    "macro_f1": 0.0841,
+    "per_class_f1": {
+      "crazing": 0.019,
+      "inclusion": 0.0,
+      "patches": 0.128,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.358
+    },
+    "tp": 35,
+    "fp": 86,
+    "fn": 566
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.3548,
+    "recall": 0.0549,
+    "f1": 0.0951,
+    "macro_f1": 0.084,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.12,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.383
+    },
+    "tp": 33,
+    "fp": 60,
+    "fn": 568
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.566,
+    "recall": 0.0499,
+    "f1": 0.0917,
+    "macro_f1": 0.0827,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.093,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.403
+    },
+    "tp": 30,
+    "fp": 23,
+    "fn": 571
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.3263,
+    "recall": 0.0516,
+    "f1": 0.0891,
+    "macro_f1": 0.0819,
+    "per_class_f1": {
+      "crazing": 0.018,
+      "inclusion": 0.0,
+      "patches": 0.038,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.435
+    },
+    "tp": 31,
+    "fp": 64,
+    "fn": 570
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.1675,
+    "recall": 0.0549,
+    "f1": 0.0827,
+    "macro_f1": 0.0817,
+    "per_class_f1": {
+      "crazing": 0.014,
+      "inclusion": 0.0,
+      "patches": 0.048,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.429
+    },
+    "tp": 33,
+    "fp": 164,
+    "fn": 568
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.2239,
+    "recall": 0.0499,
+    "f1": 0.0816,
+    "macro_f1": 0.0814,
+    "per_class_f1": {
+      "crazing": 0.027,
+      "inclusion": 0.055,
+      "patches": 0.056,
+      "pitted_surface": 0.024,
+      "rolled-in_scale": 0.044,
+      "scratches": 0.283
+    },
+    "tp": 30,
+    "fp": 104,
+    "fn": 571
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.0872,
+    "recall": 0.0649,
+    "f1": 0.0744,
+    "macro_f1": 0.0807,
+    "per_class_f1": {
+      "crazing": 0.008,
+      "inclusion": 0.013,
+      "patches": 0.075,
+      "pitted_surface": 0.02,
+      "rolled-in_scale": 0.018,
+      "scratches": 0.35
+    },
+    "tp": 39,
+    "fp": 408,
+    "fn": 562
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.0497,
+    "recall": 0.0849,
+    "f1": 0.0627,
+    "macro_f1": 0.0801,
+    "per_class_f1": {
+      "crazing": 0.018,
+      "inclusion": 0.02,
+      "patches": 0.022,
+      "pitted_surface": 0.08,
+      "rolled-in_scale": 0.085,
+      "scratches": 0.256
+    },
+    "tp": 51,
+    "fp": 976,
+    "fn": 550
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.1423,
+    "recall": 0.0582,
+    "f1": 0.0826,
+    "macro_f1": 0.0799,
+    "per_class_f1": {
+      "crazing": 0.012,
+      "inclusion": 0.0,
+      "patches": 0.09,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.378
+    },
+    "tp": 35,
+    "fp": 211,
+    "fn": 566
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.1689,
+    "recall": 0.0616,
+    "f1": 0.0902,
+    "macro_f1": 0.0796,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.09,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.388
+    },
+    "tp": 37,
+    "fp": 182,
+    "fn": 564
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.135,
+    "recall": 0.0699,
+    "f1": 0.0921,
+    "macro_f1": 0.0792,
+    "per_class_f1": {
+      "crazing": 0.014,
+      "inclusion": 0.0,
+      "patches": 0.114,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.348
+    },
+    "tp": 42,
+    "fp": 269,
+    "fn": 559
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.0567,
+    "recall": 0.1381,
+    "f1": 0.0804,
+    "macro_f1": 0.0791,
+    "per_class_f1": {
+      "crazing": 0.027,
+      "inclusion": 0.126,
+      "patches": 0.032,
+      "pitted_surface": 0.059,
+      "rolled-in_scale": 0.07,
+      "scratches": 0.161
+    },
+    "tp": 83,
+    "fp": 1380,
+    "fn": 518
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.093,
+    "recall": 0.0532,
+    "f1": 0.0677,
+    "macro_f1": 0.0789,
+    "per_class_f1": {
+      "crazing": 0.01,
+      "inclusion": 0.0,
+      "patches": 0.015,
+      "pitted_surface": 0.021,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.427
+    },
+    "tp": 32,
+    "fp": 312,
+    "fn": 569
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.0439,
+    "recall": 0.0749,
+    "f1": 0.0554,
+    "macro_f1": 0.0786,
+    "per_class_f1": {
+      "crazing": 0.019,
+      "inclusion": 0.012,
+      "patches": 0.021,
+      "pitted_surface": 0.048,
+      "rolled-in_scale": 0.028,
+      "scratches": 0.344
+    },
+    "tp": 45,
+    "fp": 979,
+    "fn": 556
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 900,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.2459,
+    "recall": 0.0499,
+    "f1": 0.083,
+    "macro_f1": 0.0785,
+    "per_class_f1": {
+      "crazing": 0.015,
+      "inclusion": 0.0,
+      "patches": 0.075,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.38
+    },
+    "tp": 30,
+    "fp": 92,
+    "fn": 571
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.0488,
+    "recall": 0.0666,
+    "f1": 0.0563,
+    "macro_f1": 0.0772,
+    "per_class_f1": {
+      "crazing": 0.022,
+      "inclusion": 0.0,
+      "patches": 0.022,
+      "pitted_surface": 0.015,
+      "rolled-in_scale": 0.013,
+      "scratches": 0.392
+    },
+    "tp": 40,
+    "fp": 779,
+    "fn": 561
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.3125,
+    "recall": 0.0499,
+    "f1": 0.0861,
+    "macro_f1": 0.0771,
+    "per_class_f1": {
+      "crazing": 0.035,
+      "inclusion": 0.0,
+      "patches": 0.127,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.3
+    },
+    "tp": 30,
+    "fp": 66,
+    "fn": 571
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.136,
+    "recall": 0.0616,
+    "f1": 0.0848,
+    "macro_f1": 0.0769,
+    "per_class_f1": {
+      "crazing": 0.013,
+      "inclusion": 0.0,
+      "patches": 0.094,
+      "pitted_surface": 0.023,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.331
+    },
+    "tp": 37,
+    "fp": 235,
+    "fn": 564
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 150,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.1244,
+    "recall": 0.0815,
+    "f1": 0.0985,
+    "macro_f1": 0.0768,
+    "per_class_f1": {
+      "crazing": 0.011,
+      "inclusion": 0.039,
+      "patches": 0.163,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.247
+    },
+    "tp": 49,
+    "fp": 345,
+    "fn": 552
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.3125,
+    "recall": 0.0499,
+    "f1": 0.0861,
+    "macro_f1": 0.0759,
+    "per_class_f1": {
+      "crazing": 0.037,
+      "inclusion": 0.0,
+      "patches": 0.112,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.306
+    },
+    "tp": 30,
+    "fp": 66,
+    "fn": 571
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.5294,
+    "recall": 0.0449,
+    "f1": 0.0828,
+    "macro_f1": 0.0759,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.031,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.424
+    },
+    "tp": 27,
+    "fp": 24,
+    "fn": 574
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 150,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.1522,
+    "recall": 0.0582,
+    "f1": 0.0842,
+    "macro_f1": 0.0755,
+    "per_class_f1": {
+      "crazing": 0.014,
+      "inclusion": 0.0,
+      "patches": 0.1,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.338
+    },
+    "tp": 35,
+    "fp": 195,
+    "fn": 566
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.75,
+    "recall": 0.0449,
+    "f1": 0.0848,
+    "macro_f1": 0.0749,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.036,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.413
+    },
+    "tp": 27,
+    "fp": 9,
+    "fn": 574
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.0634,
+    "recall": 0.0682,
+    "f1": 0.0657,
+    "macro_f1": 0.0735,
+    "per_class_f1": {
+      "crazing": 0.011,
+      "inclusion": 0.0,
+      "patches": 0.08,
+      "pitted_surface": 0.017,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.333
+    },
+    "tp": 41,
+    "fp": 606,
+    "fn": 560
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 900,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.2314,
+    "recall": 0.0466,
+    "f1": 0.0776,
+    "macro_f1": 0.0733,
+    "per_class_f1": {
+      "crazing": 0.054,
+      "inclusion": 0.0,
+      "patches": 0.069,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.317
+    },
+    "tp": 28,
+    "fp": 93,
+    "fn": 573
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.0501,
+    "recall": 0.0782,
+    "f1": 0.0611,
+    "macro_f1": 0.0732,
+    "per_class_f1": {
+      "crazing": 0.036,
+      "inclusion": 0.012,
+      "patches": 0.057,
+      "pitted_surface": 0.013,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.321
+    },
+    "tp": 47,
+    "fp": 891,
+    "fn": 554
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.063,
+    "recall": 0.0666,
+    "f1": 0.0647,
+    "macro_f1": 0.0726,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.054,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.381
+    },
+    "tp": 40,
+    "fp": 595,
+    "fn": 561
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 13
+    },
+    "precision": 0.0799,
+    "recall": 0.0549,
+    "f1": 0.0651,
+    "macro_f1": 0.0724,
+    "per_class_f1": {
+      "crazing": 0.009,
+      "inclusion": 0.0,
+      "patches": 0.034,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.391
+    },
+    "tp": 33,
+    "fp": 380,
+    "fn": 568
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.1987,
+    "recall": 0.0499,
+    "f1": 0.0798,
+    "macro_f1": 0.072,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.062,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.369
+    },
+    "tp": 30,
+    "fp": 121,
+    "fn": 571
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.0371,
+    "recall": 0.1481,
+    "f1": 0.0593,
+    "macro_f1": 0.0716,
+    "per_class_f1": {
+      "crazing": 0.014,
+      "inclusion": 0.132,
+      "patches": 0.061,
+      "pitted_surface": 0.036,
+      "rolled-in_scale": 0.046,
+      "scratches": 0.141
+    },
+    "tp": 89,
+    "fp": 2313,
+    "fn": 512
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.7143,
+    "recall": 0.0416,
+    "f1": 0.0786,
+    "macro_f1": 0.0715,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.053,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.376
+    },
+    "tp": 25,
+    "fp": 10,
+    "fn": 576
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.0237,
+    "recall": 0.0799,
+    "f1": 0.0366,
+    "macro_f1": 0.0711,
+    "per_class_f1": {
+      "crazing": 0.002,
+      "inclusion": 0.039,
+      "patches": 0.013,
+      "pitted_surface": 0.028,
+      "rolled-in_scale": 0.034,
+      "scratches": 0.309
+    },
+    "tp": 48,
+    "fp": 1977,
+    "fn": 553
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.0268,
+    "recall": 0.1032,
+    "f1": 0.0426,
+    "macro_f1": 0.0711,
+    "per_class_f1": {
+      "crazing": 0.005,
+      "inclusion": 0.058,
+      "patches": 0.04,
+      "pitted_surface": 0.041,
+      "rolled-in_scale": 0.031,
+      "scratches": 0.251
+    },
+    "tp": 62,
+    "fp": 2249,
+    "fn": 539
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.3971,
+    "recall": 0.0449,
+    "f1": 0.0807,
+    "macro_f1": 0.0705,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.045,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.378
+    },
+    "tp": 27,
+    "fp": 41,
+    "fn": 574
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.034,
+    "recall": 0.0649,
+    "f1": 0.0446,
+    "macro_f1": 0.0704,
+    "per_class_f1": {
+      "crazing": 0.008,
+      "inclusion": 0.0,
+      "patches": 0.02,
+      "pitted_surface": 0.014,
+      "rolled-in_scale": 0.021,
+      "scratches": 0.359
+    },
+    "tp": 39,
+    "fp": 1107,
+    "fn": 562
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.0433,
+    "recall": 0.0715,
+    "f1": 0.054,
+    "macro_f1": 0.0704,
+    "per_class_f1": {
+      "crazing": 0.014,
+      "inclusion": 0.044,
+      "patches": 0.06,
+      "pitted_surface": 0.049,
+      "rolled-in_scale": 0.026,
+      "scratches": 0.23
+    },
+    "tp": 43,
+    "fp": 949,
+    "fn": 558
+  },
+  {
+    "config": {
+      "anom_thresh": 12.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.0259,
+    "recall": 0.1048,
+    "f1": 0.0416,
+    "macro_f1": 0.0698,
+    "per_class_f1": {
+      "crazing": 0.002,
+      "inclusion": 0.093,
+      "patches": 0.039,
+      "pitted_surface": 0.051,
+      "rolled-in_scale": 0.035,
+      "scratches": 0.199
+    },
+    "tp": 63,
+    "fp": 2368,
+    "fn": 538
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.3676,
+    "recall": 0.0416,
+    "f1": 0.0747,
+    "macro_f1": 0.0694,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.0,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.417
+    },
+    "tp": 25,
+    "fp": 43,
+    "fn": 576
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.042,
+    "recall": 0.0532,
+    "f1": 0.047,
+    "macro_f1": 0.0687,
+    "per_class_f1": {
+      "crazing": 0.005,
+      "inclusion": 0.0,
+      "patches": 0.01,
+      "pitted_surface": 0.017,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.381
+    },
+    "tp": 32,
+    "fp": 730,
+    "fn": 569
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.0308,
+    "recall": 0.0632,
+    "f1": 0.0414,
+    "macro_f1": 0.0686,
+    "per_class_f1": {
+      "crazing": 0.006,
+      "inclusion": 0.012,
+      "patches": 0.012,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.03,
+      "scratches": 0.352
+    },
+    "tp": 38,
+    "fp": 1197,
+    "fn": 563
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.4727,
+    "recall": 0.0433,
+    "f1": 0.0793,
+    "macro_f1": 0.0679,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.066,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.341
+    },
+    "tp": 26,
+    "fp": 29,
+    "fn": 575
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 13
+    },
+    "precision": 0.0634,
+    "recall": 0.0582,
+    "f1": 0.0607,
+    "macro_f1": 0.0664,
+    "per_class_f1": {
+      "crazing": 0.007,
+      "inclusion": 0.0,
+      "patches": 0.061,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.331
+    },
+    "tp": 35,
+    "fp": 517,
+    "fn": 566
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.0771,
+    "recall": 0.0899,
+    "f1": 0.083,
+    "macro_f1": 0.0658,
+    "per_class_f1": {
+      "crazing": 0.009,
+      "inclusion": 0.0,
+      "patches": 0.117,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.269
+    },
+    "tp": 54,
+    "fp": 646,
+    "fn": 547
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 150,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.27,
+    "recall": 0.0449,
+    "f1": 0.077,
+    "macro_f1": 0.0656,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.063,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.331
+    },
+    "tp": 27,
+    "fp": 73,
+    "fn": 574
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.0303,
+    "recall": 0.0732,
+    "f1": 0.0429,
+    "macro_f1": 0.0654,
+    "per_class_f1": {
+      "crazing": 0.003,
+      "inclusion": 0.01,
+      "patches": 0.031,
+      "pitted_surface": 0.053,
+      "rolled-in_scale": 0.038,
+      "scratches": 0.258
+    },
+    "tp": 44,
+    "fp": 1408,
+    "fn": 557
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.0335,
+    "recall": 0.0865,
+    "f1": 0.0483,
+    "macro_f1": 0.0644,
+    "per_class_f1": {
+      "crazing": 0.003,
+      "inclusion": 0.0,
+      "patches": 0.059,
+      "pitted_surface": 0.048,
+      "rolled-in_scale": 0.008,
+      "scratches": 0.268
+    },
+    "tp": 52,
+    "fp": 1498,
+    "fn": 549
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.0658,
+    "recall": 0.0616,
+    "f1": 0.0636,
+    "macro_f1": 0.0643,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.05,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.336
+    },
+    "tp": 37,
+    "fp": 525,
+    "fn": 564
+  },
+  {
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 13
+    },
+    "precision": 0.0588,
+    "recall": 0.0915,
+    "f1": 0.0716,
+    "macro_f1": 0.0638,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.125,
+      "patches": 0.0,
+      "pitted_surface": 0.08,
+      "rolled-in_scale": 0.046,
+      "scratches": 0.131
+    },
+    "tp": 55,
+    "fp": 881,
+    "fn": 546
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.0387,
+    "recall": 0.0649,
+    "f1": 0.0485,
+    "macro_f1": 0.0633,
+    "per_class_f1": {
+      "crazing": 0.004,
+      "inclusion": 0.012,
+      "patches": 0.05,
+      "pitted_surface": 0.014,
+      "rolled-in_scale": 0.011,
+      "scratches": 0.289
+    },
+    "tp": 39,
+    "fp": 968,
+    "fn": 562
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.0391,
+    "recall": 0.0749,
+    "f1": 0.0514,
+    "macro_f1": 0.0632,
+    "per_class_f1": {
+      "crazing": 0.01,
+      "inclusion": 0.034,
+      "patches": 0.075,
+      "pitted_surface": 0.038,
+      "rolled-in_scale": 0.017,
+      "scratches": 0.205
+    },
+    "tp": 45,
+    "fp": 1105,
+    "fn": 556
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.0301,
+    "recall": 0.0749,
+    "f1": 0.0429,
+    "macro_f1": 0.0628,
+    "per_class_f1": {
+      "crazing": 0.005,
+      "inclusion": 0.047,
+      "patches": 0.04,
+      "pitted_surface": 0.063,
+      "rolled-in_scale": 0.036,
+      "scratches": 0.185
+    },
+    "tp": 45,
+    "fp": 1451,
+    "fn": 556
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 9
+    },
+    "precision": 0.0857,
+    "recall": 0.0499,
+    "f1": 0.0631,
+    "macro_f1": 0.0622,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.042,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.331
+    },
+    "tp": 30,
+    "fp": 320,
+    "fn": 571
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 9
+    },
+    "precision": 0.0667,
+    "recall": 0.0582,
+    "f1": 0.0622,
+    "macro_f1": 0.0616,
+    "per_class_f1": {
+      "crazing": 0.008,
+      "inclusion": 0.0,
+      "patches": 0.064,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.297
+    },
+    "tp": 35,
+    "fp": 490,
+    "fn": 566
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 9
+    },
+    "precision": 0.0564,
+    "recall": 0.0616,
+    "f1": 0.0589,
+    "macro_f1": 0.0605,
+    "per_class_f1": {
+      "crazing": 0.007,
+      "inclusion": 0.0,
+      "patches": 0.062,
+      "pitted_surface": 0.017,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.277
+    },
+    "tp": 37,
+    "fp": 619,
+    "fn": 564
+  },
+  {
+    "config": {
+      "anom_thresh": 16.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.0283,
+    "recall": 0.0849,
+    "f1": 0.0424,
+    "macro_f1": 0.058,
+    "per_class_f1": {
+      "crazing": 0.007,
+      "inclusion": 0.028,
+      "patches": 0.047,
+      "pitted_surface": 0.053,
+      "rolled-in_scale": 0.024,
+      "scratches": 0.19
+    },
+    "tp": 51,
+    "fp": 1754,
+    "fn": 550
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 60,
+      "box": 31,
+      "close_k": 5
+    },
+    "precision": 0.0445,
+    "recall": 0.0699,
+    "f1": 0.0544,
+    "macro_f1": 0.0574,
+    "per_class_f1": {
+      "crazing": 0.006,
+      "inclusion": 0.0,
+      "patches": 0.061,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.277
+    },
+    "tp": 42,
+    "fp": 902,
+    "fn": 559
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 900,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.6897,
+    "recall": 0.0333,
+    "f1": 0.0635,
+    "macro_f1": 0.0565,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.0,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.339
+    },
+    "tp": 20,
+    "fp": 9,
+    "fn": 581
+  },
+  {
+    "config": {
+      "anom_thresh": 26.0,
+      "min_area": 60,
+      "box": 21,
+      "close_k": 5
+    },
+    "precision": 0.1077,
+    "recall": 0.0466,
+    "f1": 0.065,
+    "macro_f1": 0.0563,
+    "per_class_f1": {
+      "crazing": 0.0,
+      "inclusion": 0.0,
+      "patches": 0.05,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.288
+    },
+    "tp": 28,
+    "fp": 232,
+    "fn": 573
+  },
+  {
+    "config": {
+      "anom_thresh": 20.0,
+      "min_area": 60,
+      "box": 45,
+      "close_k": 5
+    },
+    "precision": 0.0421,
+    "recall": 0.0815,
+    "f1": 0.0556,
+    "macro_f1": 0.0536,
+    "per_class_f1": {
+      "crazing": 0.004,
+      "inclusion": 0.034,
+      "patches": 0.088,
+      "pitted_surface": 0.0,
+      "rolled-in_scale": 0.0,
+      "scratches": 0.195
+    },
+    "tp": 49,
+    "fp": 1114,
+    "fn": 552
+  }
+]

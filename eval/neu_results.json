@@ -1,0 +1,104 @@
+{
+  "dataset": "NEU-DET",
+  "config": {
+    "box": 31,
+    "anom_thresh": 12.0,
+    "open_k": 3,
+    "close_k": 7,
+    "min_area": 60,
+    "max_frac": 0.95,
+    "merge_iou": 0.3
+  },
+  "iou_threshold": 0.5,
+  "per_class": {
+    "crazing": {
+      "images": 50,
+      "tp": 10,
+      "fp": 1029,
+      "fn": 114,
+      "precision": 0.0096,
+      "recall": 0.0806,
+      "f1": 0.0172,
+      "mean_matched_iou": 0.5704,
+      "detected_at_iou0.3": 0.6,
+      "images_with_no_prediction": 0,
+      "mean_coverage": 0.1756
+    },
+    "inclusion": {
+      "images": 50,
+      "tp": 12,
+      "fp": 94,
+      "fn": 154,
+      "precision": 0.1132,
+      "recall": 0.0723,
+      "f1": 0.0882,
+      "mean_matched_iou": 0.6094,
+      "detected_at_iou0.3": 0.36,
+      "images_with_no_prediction": 13,
+      "mean_coverage": 0.0183
+    },
+    "patches": {
+      "images": 50,
+      "tp": 5,
+      "fp": 464,
+      "fn": 128,
+      "precision": 0.0107,
+      "recall": 0.0376,
+      "f1": 0.0166,
+      "mean_matched_iou": 0.5932,
+      "detected_at_iou0.3": 0.4,
+      "images_with_no_prediction": 1,
+      "mean_coverage": 0.1807
+    },
+    "pitted_surface": {
+      "images": 50,
+      "tp": 7,
+      "fp": 215,
+      "fn": 83,
+      "precision": 0.0315,
+      "recall": 0.0778,
+      "f1": 0.0449,
+      "mean_matched_iou": 0.7074,
+      "detected_at_iou0.3": 0.22,
+      "images_with_no_prediction": 15,
+      "mean_coverage": 0.0352
+    },
+    "rolled_in_scale": {
+      "images": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mean_matched_iou": 0.0,
+      "detected_at_iou0.3": 0.0,
+      "images_with_no_prediction": 0,
+      "mean_coverage": 0.0
+    },
+    "scratches": {
+      "images": 50,
+      "tp": 36,
+      "fp": 111,
+      "fn": 79,
+      "precision": 0.2449,
+      "recall": 0.313,
+      "f1": 0.2748,
+      "mean_matched_iou": 0.6322,
+      "detected_at_iou0.3": 0.94,
+      "images_with_no_prediction": 0,
+      "mean_coverage": 0.1819
+    }
+  },
+  "overall": {
+    "precision": 0.0353,
+    "recall": 0.1115,
+    "f1": 0.0536,
+    "macro_f1": 0.0736,
+    "tp": 70,
+    "fp": 1913,
+    "fn": 558,
+    "images": 250,
+    "seconds": 5.1
+  }
+}

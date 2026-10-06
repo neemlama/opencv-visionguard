@@ -3,131 +3,201 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ForgeSight — Agentic Visual Inspection</title>
+<title>ForgeSight — Steel Surface Inspection</title>
 <style>
-  :root{--bg:#0f1216;--panel:#171b21;--line:#252b34;--txt:#e6edf3;--dim:#8b98a5;--acc:#3fb950;--warn:#d29922;--bad:#f85149}
+  :root{--bg:#0f1216;--panel:#171b21;--line:#252b34;--txt:#e6edf3;--dim:#8b98a5;
+        --acc:#3fb950;--warn:#d29922;--bad:#f85149;--info:#58a6ff}
   *{box-sizing:border-box}
-  body{margin:0;font:15px/1.5 system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--txt)}
-  header{padding:20px 28px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  h1{font-size:19px;margin:0;font-weight:650;letter-spacing:.2px}
+  body{margin:0;font:15px/1.55 system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--txt)}
+  header{padding:18px 26px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  h1{font-size:18px;margin:0;font-weight:650}
   .tag{font-size:12px;color:var(--dim);border:1px solid var(--line);padding:3px 9px;border-radius:99px}
-  main{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:24px 28px;max-width:1180px}
-  @media(max-width:900px){main{grid-template-columns:1fr}}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
-  h2{font-size:12px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin:0 0 14px}
-  #drop{border:1.5px dashed var(--line);border-radius:10px;padding:30px 16px;text-align:center;cursor:pointer;transition:.15s}
-  #drop:hover,#drop.hot{border-color:var(--acc);background:#12181d}
-  #prev{display:none;width:100%;border-radius:8px;margin-top:14px;border:1px solid var(--line)}
-  button{background:var(--acc);color:#04120a;border:0;padding:10px 18px;border-radius:7px;font-weight:600;cursor:pointer;margin-top:14px;font-size:14px}
-  button:disabled{opacity:.5;cursor:not-allowed}
+  main{display:grid;grid-template-columns:380px 1fr;gap:18px;padding:22px 26px;max-width:1300px}
+  @media(max-width:980px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  h2{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin:0 0 12px}
+  button{background:var(--acc);color:#04120a;border:0;padding:9px 15px;border-radius:7px;
+         font-weight:600;cursor:pointer;font-size:14px}
+  button:disabled{opacity:.45;cursor:not-allowed}
   button.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
-  .samples{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-  .samples button{margin:0;background:transparent;color:var(--dim);border:1px solid var(--line);padding:6px 11px;font-weight:500;font-size:13px}
-  .samples button:hover{color:var(--txt);border-color:var(--acc)}
-  .kv{display:grid;grid-template-columns:1fr auto;gap:7px 14px;font-size:14px}
+  button.alt{background:transparent;color:var(--info);border:1px solid var(--info)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  img#shot{width:100%;border-radius:8px;border:1px solid var(--line);display:block;margin-top:10px}
+  #drop{border:1.5px dashed var(--line);border-radius:8px;padding:24px 12px;text-align:center;cursor:pointer}
+  #drop:hover,#drop.hot{border-color:var(--acc)}
+  .kv{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:14px}
   .kv span:nth-child(odd){color:var(--dim)}
   .kv span:nth-child(even){font-variant-numeric:tabular-nums}
-  .verdict{display:inline-block;padding:5px 12px;border-radius:6px;font-weight:650;font-size:13px;margin-bottom:14px}
-  .v-pass{background:#12351f;color:var(--acc)}
-  .v-re-shoot,.v-re-shoot-angle{background:#3a2d0d;color:var(--warn)}
-  .v-escalate-human,.v-human-review{background:#3d1517;color:var(--bad)}
+  .pill{display:inline-block;padding:4px 11px;border-radius:6px;font-weight:650;font-size:13px;margin-bottom:12px}
+  .p-pass{background:#12351f;color:var(--acc)}
+  .p-escalate-human{background:#3d1517;color:var(--bad)}
+  .p-human-review,.p-re-capture{background:#3a2d0d;color:var(--warn)}
   ol.trace{list-style:none;padding:0;margin:0;counter-reset:s}
-  ol.trace li{position:relative;padding:0 0 18px 26px;border-left:1px solid var(--line);margin-left:8px}
+  ol.trace li{position:relative;padding:0 0 14px 26px;border-left:1px solid var(--line);margin-left:8px}
   ol.trace li:last-child{border-left-color:transparent;padding-bottom:0}
-  ol.trace li::before{counter-increment:s;content:counter(s);position:absolute;left:-9px;top:0;width:18px;height:18px;border-radius:50%;background:var(--acc);color:#04120a;font-size:11px;font-weight:700;display:grid;place-items:center}
+  ol.trace li::before{counter-increment:s;content:counter(s);position:absolute;left:-9px;top:1px;
+    width:18px;height:18px;border-radius:50%;background:var(--info);color:#04121f;
+    font-size:11px;font-weight:700;display:grid;place-items:center}
   .t-per{font-size:12px;color:var(--dim)}
-  .t-dec{font-weight:600;margin:3px 0}
+  .t-dec{font-weight:600;margin:2px 0}
   .t-act{font-size:13px;color:var(--dim)}
-  .empty{color:var(--dim);font-size:14px}
-  code{background:#11161c;padding:1px 6px;border-radius:4px;font-size:13px}
+  .bar{height:6px;background:#222;border-radius:3px;overflow:hidden;margin-top:4px}
+  .bar>i{display:block;height:100%;background:var(--info)}
+  .muted{color:var(--dim);font-size:13px}
+  .warnbox{border-left:3px solid var(--warn);padding:8px 12px;background:#1d1a10;
+           border-radius:0 6px 6px 0;margin-bottom:12px;font-size:13px}
 </style>
 </head>
 <body>
 <header>
   <h1>ForgeSight</h1>
-  <span class="tag">Agentic Visual Inspection &middot; OpenCV <span id="cv">5</span></span>
-  <span class="tag">AWS Graviton / COOL ready</span>
+  <span class="tag" id="tag-cv">rolled-steel surface defects · NEU</span>
+  <span class="tag" id="tag-model">model …</span>
 </header>
 <main>
   <section class="card">
-    <h2>1 &middot; Inspection image</h2>
-    <div id="drop">Drop a weld / PCB / panel image here, or click to choose<br><small style="color:var(--dim)">PNG or JPG</small></div>
+    <h2>Capture</h2>
+    <div id="drop">Drop a surface image, or click to choose</div>
     <input type="file" id="file" accept="image/*" hidden>
-    <img id="prev" alt="preview">
-    <button id="run" disabled>Run inspection</button>
-    <div class="samples">
-      <button data-s="weld_clean.jpg">clean</button>
-      <button data-s="weld_defect.jpg">defect</button>
-      <button data-s="weld_damage.jpg">severe</button>
-      <button data-s="weld_blurry.jpg">blurry</button>
-      <button data-s="weld_glare.jpg">glare</button>
+    <img id="shot" alt="capture">
+    <div class="row">
+      <button id="run" disabled>Analyse</button>
+      <button id="loop" class="alt" disabled>Run closed loop</button>
     </div>
+    <div class="row" id="presets"></div>
+    <div class="row"><span class="muted">Degrade the capture first to exercise the loop:</span></div>
+    <div class="row" id="degrow"></div>
   </section>
 
-  <section class="card">
-    <h2>2 &middot; Vision metrics (OpenCV)</h2>
-    <div id="vision" class="empty">No image analyzed yet.</div>
-  </section>
-
-  <section class="card">
-    <h2>3 &middot; Agent decision trace</h2>
-    <div id="verdict"></div>
-    <div id="trace" class="empty">The agent picks its next action from the vision evidence above.</div>
-    <div id="approve"></div>
+  <section style="display:flex;flex-direction:column;gap:18px">
+    <div class="card" id="decision-card">
+      <h2>Decision</h2>
+      <div class="muted">Upload or pick a sample.</div>
+    </div>
+    <div class="card" id="trace-card" style="display:none">
+      <h2>Agent trace</h2>
+      <div id="trace"></div>
+      <div id="approve" style="margin-top:10px"></div>
+    </div>
   </section>
 </main>
 <script>
-const $=id=>document.getElementById(id), drop=$('drop'), prev=$('prev'), run=$('run');
+const $=id=>document.getElementById(id);
 let picked=null;
 
-async function send(blob,name){
-  prev.src=URL.createObjectURL(blob); prev.style.display='block'; run.disabled=false;
-  $('vision').textContent='Analyzing...';
-  const fd=new FormData(); fd.append('file',blob,name);
-  try{
-    const r=await fetch('/inspect',{method:'POST',body:fd});
+fetch('/health').then(r=>r.json()).then(h=>{
+  $('tag-cv').textContent=`rolled-steel surface defects · OpenCV ${h.opencv}`;
+  $('tag-model').textContent=
+    `model ${(h.model.held_out_accuracy*100).toFixed(2)}% acc · macro F1 ${h.model.macro_f1}`;
+});
+
+fetch('/samples').then(r=>r.json()).then(d=>{
+  $('presets').innerHTML=d.samples.map(s=>
+    `<button class="ghost" data-u="${s.url}">${s.label}</button>`).join('');
+  $('presets').querySelectorAll('button').forEach(b=>b.onclick=async()=>{
+    const blob=await (await fetch(b.dataset.u)).blob();
+    picked=new File([blob],b.textContent+'.jpg',{type:blob.type});
+    show(blob); $('run').disabled=false; $('loop').disabled=false;
+  });
+});
+
+['soft_focus','under_exposed','specular_glare','low_contrast','sensor_noise'].forEach(k=>{
+  const b=document.createElement('button');
+  b.className='ghost'; b.textContent=k.replace(/_/g,' ');
+  b.onclick=async()=>{
+    if(!picked){alert('pick a sample first');return;}
+    const fd=new FormData(); fd.append('file',picked);
+    const r=await fetch('/capture/degrade?preset='+k,{method:'POST',body:fd});
     const d=await r.json();
-    if(d.vision.opencv_version) $('cv').textContent=d.vision.opencv_version;
-    render(d);
-  }catch(e){ $('vision').textContent='Error: '+e.message; }
+    const bin=atob(d.image_jpeg_b64);
+    const arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+    const blob=new Blob([arr],{type:'image/jpeg'});
+    picked=new File([blob],'degraded.jpg',{type:'image/jpeg'});
+    show(blob); $('run').disabled=false; $('loop').disabled=false;
+    $('decision-card').innerHTML='<h2>Decision</h2><div class="warnbox">Capture settings degraded: <b>'+
+      JSON.stringify(d.settings)+'</b>. Press <b>Run closed loop</b> to watch the agent correct them.</div>';
+  };
+  $('degrow').appendChild(b);
+});
+
+function show(blob){ $('shot').src=URL.createObjectURL(blob); }
+
+function kv(rows){
+  return '<div class="kv">'+rows.map(r=>`<span>${r[0]}</span><span>${r[1]}</span>`).join('')+'</div>';
 }
 
-function render(d){
-  const v=d.vision, t=d.agent_trace;
-  const rows=[['blur variance',v.blur_variance],['blur too high',v.is_blurry],
-    ['glare ratio',v.glare_ratio],['glare too high',v.has_glare],
-    ['edge density',v.edge_density],['large contours',v.large_contours],
-    ['dark area ratio',v.dark_area_ratio],['dark blobs',v.dark_blobs],
-    ['defect score',v.defect_score],['needs zoom',v.needs_zoom]];
-  $('vision').innerHTML='<div class="kv">'+rows.map(r=>`<span>${r[0]}</span><span>${r[1]}</span>`).join('')+'</div>';
+function confBar(p){
+  return `<div class="bar"><i style="width:${(p*100).toFixed(0)}%"></i></div>`;
+}
 
-  $('verdict').innerHTML=`<span class="verdict v-${t.final}">${t.final.replace(/-/g,' ')}</span>`;
-  $('trace').className='';
-  $('trace').innerHTML='<ol class="trace">'+t.trace.map(s=>
-    `<li><div class="t-per">perception: ${s.perception}</div><div class="t-dec">${s.decision}</div><div class="t-act">action: ${s.action}</div></li>`
-  ).join('')+'</ol>';
-  $('approve').innerHTML = t.human_required
-    ? `<button class="ghost" onclick="approve('${t.workorder_id}',true)">Approve work order</button>
-       <button class="ghost" onclick="approve('${t.workorder_id}',false)">Send to rework</button>`
+function traceHTML(trace){
+  return '<ol class="trace">'+trace.map(t=>
+    `<li><div class="t-per">${t.perception}</div>
+         <div class="t-dec">${t.decision}</div>
+         <div class="t-act">${t.action}</div></li>`).join('')+'</ol>';
+}
+
+async function analyse(){
+  const fd=new FormData(); fd.append('file',picked);
+  const d=await (await fetch('/inspect',{method:'POST',body:fd})).json();
+  const a=d.analysis, p=a.prediction, q=a.quality, l=a.localization;
+  $('trace-card').style.display='none';
+  $('decision-card').innerHTML='<h2>Decision</h2>'+
+    `<span class="pill p-${d.decision.final}">${d.decision.final.replace(/-/g,' ')}</span>`+
+    kv([
+      ['predicted class',p.defect_class],
+      ['confidence',p.confidence.toFixed(3)],
+      ['margin over runner-up',p.margin.toFixed(3)],
+      ['capture usable',q.usable],
+      ['sharpness',q.sharpness],
+      ['glare ratio',q.glare_ratio],
+      ['anomaly regions',l.region_count],
+      ['coverage',l.coverage],
+      ['opencv',a.opencv_version],
+    ])+confBar(p.confidence)+
+    '<div class="row"><span class="muted">class probabilities: '+
+      Object.entries(p.probs).map(([k,v])=>`${k} ${(v*100).toFixed(0)}%`).join(' · ')+'</span></div>';
+}
+
+async function runLoop(){
+  const fd=new FormData(); fd.append('file',picked);
+  $('decision-card').innerHTML='<h2>Decision</h2><div class="muted">running closed loop…</div>';
+  const d=await (await fetch('/inspect/loop',{method:'POST',body:fd})).json();
+  $('decision-card').innerHTML='<h2>Decision</h2>'+
+    `<span class="pill p-${d.final}">${d.final.replace(/-/g,' ')}</span>`+
+    kv([['iterations',d.iterations],['human required',d.human_required],
+        ['work order',d.workorder_id||'—'],['region',d.region?JSON.stringify(d.region):'—'],
+        ['final capture settings',d.final_settings?JSON.stringify(d.final_settings):'—']]);
+  $('trace-card').style.display='block';
+  $('trace').innerHTML=traceHTML(d.trace);
+  $('approve').innerHTML = d.human_required
+    ? `<button class="ghost" onclick="approve('${d.workorder_id}',true)">Approve</button>
+       <button class="ghost" onclick="approve('${d.workorder_id}',false)">Send to rework</button>`
     : '';
+  if(d.final_capture_jpeg_b64){
+    const bin=atob(d.final_capture_jpeg_b64);const arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+    $('shot').src=URL.createObjectURL(new Blob([arr],{type:'image/jpeg'}));
+  }
 }
 
 async function approve(id,ok){
-  const r=await fetch(`/approve/${id}?approved=${ok}`,{method:'POST'});
-  $('approve').innerHTML='<div class="t-act" style="margin-top:12px">'+JSON.stringify(await r.json())+'</div>';
+  const d=await (await fetch(`/approve/${id}?approved=${ok}`)).json();
+  $('approve').innerHTML='<span class="muted">'+JSON.stringify(d)+'</span>';
 }
 
-drop.onclick=()=>$('file').click();
-$('file').onchange=e=>{ if(e.target.files[0]) send(e.target.files[0],e.target.files[0].name); };
-['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot')}));
-['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot')}));
-drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0]; if(f) send(f,f.name)});
-run.onclick=()=>{ if(picked) send(picked,picked.name||'sample.jpg') };
-
-document.querySelectorAll('.samples button').forEach(b=>b.onclick=async()=>{
-  const name=b.dataset.s, r=await fetch('/samples/'+name), blob=await r.blob();
-  picked=new File([blob],name,{type:blob.type}); send(picked,name);
-});
+$('run').onclick=analyse;
+$('loop').onclick=runLoop;
+$('drop').onclick=()=>$('file').click();
+$('file').onchange=e=>{ if(e.target.files[0]){ picked=e.target.files[0];
+  show(picked); $('run').disabled=false; $('loop').disabled=false; } };
+['dragenter','dragover'].forEach(ev=>$('drop').addEventListener(ev,e=>{
+  e.preventDefault(); $('drop').classList.add('hot'); }));
+['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev,e=>{
+  e.preventDefault(); $('drop').classList.remove('hot'); }));
+$('drop').addEventListener('drop',e=>{const f=e.dataTransfer.files[0];
+  if(f){ picked=f; show(f); $('run').disabled=false; $('loop').disabled=false; }});
 </script>
 </body>
 </html>

@@ -1,0 +1,155 @@
+{
+  "per_class": {
+    "crazing": {
+      "precision": 0.9676,
+      "recall": 0.9944,
+      "f1": 0.9808,
+      "support": 180
+    },
+    "inclusion": {
+      "precision": 0.8791,
+      "recall": 0.8889,
+      "f1": 0.884,
+      "support": 180
+    },
+    "patches": {
+      "precision": 0.9418,
+      "recall": 0.9889,
+      "f1": 0.9648,
+      "support": 180
+    },
+    "pitted_surface": {
+      "precision": 0.9251,
+      "recall": 0.9611,
+      "f1": 0.9428,
+      "support": 180
+    },
+    "rolled-in_scale": {
+      "precision": 0.9677,
+      "recall": 1.0,
+      "f1": 0.9836,
+      "support": 180
+    },
+    "scratches": {
+      "precision": 0.9302,
+      "recall": 0.8889,
+      "f1": 0.9091,
+      "support": 180
+    },
+    "no_defect": {
+      "precision": 0.9833,
+      "recall": 0.7284,
+      "f1": 0.8369,
+      "support": 81
+    }
+  },
+  "confusion": [
+    [
+      179,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      0,
+      160,
+      3,
+      8,
+      0,
+      9,
+      0
+    ],
+    [
+      0,
+      2,
+      178,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      2,
+      3,
+      0,
+      173,
+      0,
+      2,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      180,
+      0,
+      0
+    ],
+    [
+      0,
+      12,
+      4,
+      1,
+      3,
+      160,
+      0
+    ],
+    [
+      4,
+      5,
+      4,
+      5,
+      3,
+      1,
+      59
+    ]
+  ],
+  "held_out_accuracy": 0.938,
+  "macro_f1": 0.9289,
+  "top_confusions": [
+    {
+      "count": 12,
+      "true": "scratches",
+      "pred": "inclusion"
+    },
+    {
+      "count": 9,
+      "true": "inclusion",
+      "pred": "scratches"
+    },
+    {
+      "count": 8,
+      "true": "inclusion",
+      "pred": "pitted_surface"
+    },
+    {
+      "count": 5,
+      "true": "no_defect",
+      "pred": "pitted_surface"
+    },
+    {
+      "count": 5,
+      "true": "no_defect",
+      "pred": "inclusion"
+    },
+    {
+      "count": 4,
+      "true": "scratches",
+      "pred": "patches"
+    }
+  ],
+  "config": {
+    "test_fraction": 0.3,
+    "seed": 0,
+    "epochs": 400,
+    "lr": 0.5,
+    "l2": 0.001,
+    "out": "C:\\Users\\wecal\\Documents\\Codes\\opencv-visionguard\\eval\\classifier_metrics.json",
+    "include_background": true,
+    "cls_only": false
+  }
+}

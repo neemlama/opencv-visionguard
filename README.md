@@ -1,89 +1,139 @@
-# ForgeSight — Agentic Visual Inspection with OpenCV 5 + COOL on AWS Graviton
-Target: OpenCV AI Competition 2026, powered by AWS (deadline Oct 26, 2026 11:45pm PDT)
-Goal: Win Overall ($5k/$3k/$2k) + Best Use of COOL ($1k) + Agentic Vision ($1k) = max $7k.
-Rule verified: "An entry may receive no more than one Overall Award and may also receive one or both Special Awards."
+# ForgeSight — Agentic Visual Inspection of Rolled-Steel Surface Defects
+
+OpenCV AI Competition 2026, powered by AWS (deadline Oct 26, 2026 11:45pm PDT).
+Targets Overall ($5k/$3k/$2k) + Best Use of COOL ($1k) + Agentic Vision ($1k).
+Rules confirm one entry may take one Overall Award **and** both Special Awards.
+
+**Domain: one.** Rolled-steel surface defect inspection. Not welds, PCBs, solar
+or pipes — an earlier draft claimed all four and had only built one. Scope was cut
+to the single domain we could actually evaluate.
+
+---
 
 ## What it does
-Agentic inspection for welds / PCB / solar / pipe images:
-1. OpenCV 5 analyzes image: blur (Laplacian variance), glare (HSV V channel),
-   defects (Canny edges **+ adaptive-threshold dark-blob detection**).
-2. Agent loop decides next action from vision evidence:
-   - blurry -> ask re-shoot with fix settings
-   - glare -> ask angle change
-   - uncertain -> auto-zoom crop + re-run
-   - defect found -> escalate to human approval + create work order
-   - clean -> pass
-3. Core OpenCV workload runs with **COOL on AWS Graviton**, benchmarked in three
-   arms (see below).
 
-## Why this wins
-- **Agentic**: vision output changes the next action, and every step is logged as
-  a trace. Not a chatbot describing a fixed result.
-- **COOL**: three-arm benchmark isolates the library from the hardware.
-  Notably `adaptiveThreshold` — one of the ops COOL optimizes — is ~56% of our
-  pipeline cost, so the workload genuinely exercises COOL's fast path.
-- **Overall rubric**: technical 30% + innovation 20% + impact 20% + UX 10% +
-  docs 10% + cloud 10%.
+A capture of a steel surface goes in. The system decides what should happen next,
+and sometimes acts on the world and looks again.
 
-## COOL is an AMI, not a package
-COOL ships as an **AWS Marketplace Graviton AMI** (Ubuntu 24.04, KleidiCV,
-OpenCV 5-based) — there is no `pip install cool` and nothing to bake into a
-Dockerfile. Inside the instance it is activated with:
+1. **Capture quality gate** (OpenCV 5) — sharpness, glare, blown highlights,
+   crushed shadows. An unusable frame is *never* classified; it is sent back with
+   a specific physical fix.
+2. **Defect classification** (OpenCV 5 features + NumPy logistic regression) —
+   which of the six NEU defect classes, or clean.
+3. **Localisation** (OpenCV 5) — connected components on a local-anomaly map,
+   used as a coarse pointer and as an *independent* check on the classifier.
+4. **Agentic loop** — the evidence above changes the next action: recapture with a
+   named fix, second-opinion re-analysis, escalate to a stop-the-line work order,
+   queue human review, or pass.
 
-```bash
-export LD_LIBRARY_PATH="/opt/cool/cpp_sdk/lib:$LD_LIBRARY_PATH"
-export PYTHONPATH="/opt/cool/python_3.12/site-packages/"
-python3.12 bench.py
-```
+## Measured results (public data, held-out split)
 
-Because of that, the benchmark uses three arms rather than two:
+| metric | value |
+|---|---|
+| defect classification, 7 classes | **93.80% accuracy**, macro F1 0.929 |
+| accuracy on the capture set used at inference | **95.40%** |
+| confidence calibration (ECE) | **0.0218** (was 0.0750 before temperature scaling) |
+| defect sensitivity at the shipped operating point | **1.0000** — 0 of 1080 defects missed |
+| auto-escalation rate | 42.8% of defects closed without human re-inspection |
+| clean captures released automatically | 48.1% |
+| COOL vs stock OpenCV, production pipeline | **0.97x — parity** (see below) |
+| COOL vs stock OpenCV, earlier Canny-heavy pipeline | **1.27x** |
 
-| Arm | Instance | Library | Purpose |
-|---|---|---|---|
-| A | Graviton | COOL | Award eligibility: COOL on Arm |
-| B | Graviton, same family | DIY pip OpenCV | isolates the library's effect |
-| C | x86 | DIY pip OpenCV | hardware baseline, Arm/x86 coexistence |
+Trained and evaluated on **NEU-CLS + NEU-DET** (3600 real photographs, 6 defect
+classes) plus a `no_defect` class built from annotated-background crops. No
+synthetic data is used anywhere in the evaluation.
 
-A two-way COOL-vs-x86 test would confound library and hardware. See
-`docs/COOL-setup.md`.
+## The COOL finding, stated plainly
+
+On our production pipeline COOL is **not** faster (0.97x). One op —
+`gabor_filter2D_x16` — is 82% of runtime and COOL leaves it at exactly 1.00x.
+COOL does accelerate `Canny` (1.49x), `resize` (1.33x) and `cvtColor` (1.23x), but
+those are under 6% of our workload.
+
+On the earlier Canny-dominated pipeline the same hardware and libraries gave
+**1.27x**.
+
+We report both. We did not rewrite the feature bank to make COOL look good — that
+would be benchmark-fitting. Full per-op tables in `docs/BENCHMARK-RESULTS.md`.
 
 ## Structure
-- `backend/app/` FastAPI + OpenCV 5 vision + agent loop (`vision.py`, `agent.py`)
-- `frontend/index.html` upload UI, metrics panel, trace timeline, approvals
-- `bench/bench.py` per-op + end-to-end benchmark, self-identifies COOL vs DIY
-- `aws/run_bench.py` SSM-driven orchestrator that runs all arms and terminates them
-- `docs/CHALLENGES.md` engineering log incl. the dark-pit false-negative post-mortem
-- `docs/COOL-setup.md` Marketplace steps, env vars, cost model, judge checklist
-- `samples/` 5 synthetic weld images driving 5 agent outcomes
 
-## Quick start (local, no AWS)
+| path | purpose |
+|---|---|
+| `backend/app/features.py` | OpenCV 5 descriptor: 16 Gabor, Sobel, blur/anomaly, Laplacian |
+| `backend/app/classifier.py` | NumPy logistic regression + temperature scaling |
+| `backend/app/analysis.py` | perception: quality gate, classification, localisation |
+| `backend/app/agent.py` | decision loop, confidence bands, bounded retries |
+| `backend/app/capture.py` | capture-settings simulator (fixes change the render) |
+| `backend/app/model.npz` | trained weights + fitted temperature |
+| `bench/bench.py`, `aws/run_bench.py` | 3-arm COOL benchmark on AWS Graviton4 |
+| `eval/` | training, calibration, localisation eval, loop demo |
+| `docs/` | evaluation, benchmark, challenges, cost guard |
+
+## Run it
+
 ```powershell
 cd C:\Users\wecal\Documents\Codes\opencv-visionguard
-pip install opencv-python fastapi "uvicorn[standard]" python-multipart
-python -m backend.app.make_samples        # regenerate sample images
+pip install opencv-python fastapi "uvicorn[standard]" python-multipart python-pillow
+python eval\train_classifier.py --include-background   # writes backend/app/model.npz
 uvicorn backend.app.main:app --port 8000
-# open http://localhost:8000
+# http://localhost:8000  ·  /docs for the API
 ```
 
-Local benchmark (proves the harness runs on any machine):
+Evidence, no AWS needed:
+
 ```powershell
-python bench\bench.py --label local-dev-arm --instance-type none --iters 8 --warmup 2
+python eval\train_classifier.py --include-background   # accuracy + confusion matrix
+python eval\triage_eval.py                            # operating-point calibration
+python eval\neu_eval.py --limit 100                   # localisation, IoU per class
+python eval\demo_loop.py                              # closed-loop traces
 ```
 
-## COOL benchmark on AWS
+AWS benchmark (~`$0.015`, auto-terminating):
+
 ```powershell
-aws login                                     # session expired on this machine
-Copy-Item .env.example .env                   # fill in AMI IDs
-python aws\run_bench.py --region ap-south-1 --ami-arm64 $env:COOL_AMI
+aws login
+python aws\run_bench.py --region us-east-1 `
+    --arm "B=ami-0bec8cef5313300ad:c8g.medium" `
+    --arm "A=ami-01db31139bc5615d8:c8g.medium:cool"
+python bench\show.py
 ```
 
-## Submission checklist (from rules)
-- [x] OpenCV 5 substantive analysis + AWS component
-- [x] agent trace proving vision -> action
-- [x] benchmark harness + orchestrator
-- [x] eval evidence incl. failure cases (`docs/CHALLENGES.md`)
-- [ ] three-arm COOL benchmark executed, results committed
-- [ ] technical report (problem, users, arch, eval, limits, responsible use)
+## OpenCV 5 compliance
+
+The **application runs OpenCV 5.0.0** on every request (`/health` reports it).
+
+The benchmark arms run **4.14** because COOL's images bundle 4.12/4.14 — the
+Marketplace listing calls the product "based on OpenCV 5", which does not match
+either image. Pinning both arms to the same version is what makes the A/B delta
+attributable to the library instead of a version change. Building OpenCV 5 from
+source on Graviton for the control would remove the caveat at the cost of hours of
+compile time; it is a documented gap, not an oversight.
+
+## Known limitations
+
+Stated up front, quantified in `docs/EVALUATION.md`:
+
+- **Localisation is weak** — box-level IoU 0.5 macro F1 ~0.19 even after grid
+  search. NEU defects are diffuse and often span the frame. The classifier carries
+  the decision; localisation is a pointer and a cross-check.
+- **`no_defect` recall is 0.728** and rests on only 269 background crops, because
+  most NEU frames have annotations covering nearly the whole image. This is the
+  weakest part of the model.
+- `scratches` ↔ `inclusion` and `inclusion` ↔ `pitted_surface` are the dominant
+  confusions — thin linear features.
+- No real production line: single flat 200x200 steel crops, no video, no camera
+  geometry, no mill tolerance model.
+- Human approval is a stub endpoint, not a workflow system.
+
+## Submission checklist
+
+- [x] OpenCV 5 substantive image analysis, live-checked via `/health`
+- [x] agent trace where vision evidence changes the next action
+- [x] real public dataset, held-out metrics, confusion matrix, calibration
+- [x] 3-arm reproducible COOL benchmark on Graviton4
+- [x] failure cases and limitations documented (`docs/CHALLENGES.md`)
+- [x] closed capture loop (fix changes settings, scene re-rendered)
+- [ ] AWS-hosted demo endpoint
 - [ ] architecture diagram
-- [ ] working public endpoint
-- [ ] <=5 min video
+- [ ] technical report + <=5 min video

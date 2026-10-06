@@ -1,0 +1,31 @@
+{
+  "class_names": [
+    "crazing",
+    "inclusion",
+    "patches",
+    "pitted_surface",
+    "rolled-in_scale",
+    "scratches",
+    "no_defect"
+  ],
+  "temperature": 0.7,
+  "dataset": "NEU-CLS + NEU-DET",
+  "images": 3869,
+  "train": 2708,
+  "test": 1161,
+  "test_fraction": 0.3,
+  "seed": 0,
+  "held_out_accuracy": 0.938,
+  "macro_f1": 0.9289,
+  "accuracy_by_source": {
+    "bg": 0.7284,
+    "cls": 0.9534,
+    "det": 0.954
+  },
+  "mean_top1_confidence": 0.9265,
+  "epochs": 400,
+  "descriptor_len": 69,
+  "ece_before_scaling": 0.0679,
+  "ece_after_scaling": 0.0218,
+  "trained_on": "public NEU-CLS + NEU-DET images; no_defect from unannotated regions"
+}

@@ -3,113 +3,107 @@
 Real AWS measurements. Raw JSON: `bench/results/comparison-us-east-1.json`.
 Format with `python bench\show.py`.
 
-## Headline
+Two pipelines were benchmarked on identical hardware with identical library
+versions. **They disagree, and that is the most useful thing we measured.**
+
+---
+
+## 1. Production pipeline — rolled-steel surface inspection (NEU)
+
+The pipeline the product actually runs: 16 Gabor `filter2D` responses, 2 Sobel
+gradients, magnitude, orientation histogram, 3 box blurs + `absdiff`, Laplacian,
+and the localiser (blur + absdiff + threshold + morphology + connected
+components).
 
 | arm | instance | library | OpenCV | fps | ms/frame |
 |---|---|---|---|---|---|
-| **A** | `c8g.medium` (Graviton4) | **COOL** | 4.14.0-pre | **893.42** | **1.12** |
-| **B** | `c8g.medium` (Graviton4) | DIY pip | 4.14.0 | **702.60** | 1.42 |
+| A | `c8g.medium` (Graviton4) | **COOL** | 4.14.0-pre | 170.23 | 5.87 |
+| B | `c8g.medium` (Graviton4) | DIY pip | 4.14.0 | 175.90 | 5.68 |
 
-**A/B = 1.27x library-only** — same instance type, same OS, same major.minor.
-This is the number that satisfies the COOL Award requirement that COOL executes
-the claimed core workload on AWS Graviton.
+**A/B = 0.97x — parity. COOL is not faster on our production workload.**
 
-Secondary, also on Graviton4 (`c6g.large`, COOL Graviton2 image, OpenCV 4.12):
-A 226.73 vs B 202.02 = **1.12x**.
+### Why: one op is 82% of the pipeline and COOL does not touch it
 
-## Per-op, COOL vs stock OpenCV on identical hardware (A vs B)
-
-| op | COOL | DIY | COOL faster by |
+| op | COOL (A) | DIY (B) | COOL faster by |
 |---|---|---|---|
-| `Canny` | 0.1893 | 0.5964 | **3.15x** |
-| `GaussianBlur` | 0.0997 | 0.1097 | 1.10x |
-| `resize` | 0.0312 | 0.0343 | 1.10x |
-| `dilate` | 0.0498 | 0.0529 | 1.06x |
-| `cvtColor` | 0.0902 | 0.0911 | 1.01x |
-| `subtract` | 0.0167 | 0.0169 | 1.01x |
-| `blur_box25` | 0.3439 | 0.3474 | 0.99x |
-| `findContours` | 0.0384 | 0.0384 | 1.00x |
-| `morphOpen` | 0.0962 | 0.0962 | 1.00x |
-| `threshold` | 0.0143 | 0.0157 | 0.91x |
-| `adaptiveThreshold` (legacy, unused) | 1.7194 | 1.0836 | **0.63x** |
+| **`gabor_filter2D_x16`** | **4.681** | **4.681** | **1.00x** |
+| `sobel_x2` | 0.0282 | 0.0284 | 0.99x |
+| `magnitude` | 0.0126 | 0.0126 | 1.00x |
+| `blur_box9` | 0.0264 | 0.0239 | 0.95x |
+| `blur_box21` | 0.0293 | 0.0277 | 0.95x |
+| `blur_box41` | 0.0364 | 0.0339 | 0.93x |
+| `absdiff` | 0.0033 | 0.0032 | 0.97x |
+| `threshold` | 0.0054 | 0.0032 | **0.59x** |
+| `morph_close` | 0.0143 | 0.0146 | 1.02x |
+| `connected_components` | 0.0466 | 0.0493 | 1.06x |
+| `laplacian` | 0.0131 | 0.0106 | 0.81x |
+| `resize_128` | 0.0021 | 0.0028 | **1.33x** |
+| `cvtColor` | 0.0129 | 0.0162 | **1.23x** |
+| `canny_legacy` (unused) | 0.1886 | 0.2813 | **1.49x** |
+| `adaptiveThreshold_legacy` (unused) | 0.1599 | 0.0892 | **0.56x** |
 
-## How this was found: a measurement-driven optimisation
+(ms/call. The two `legacy` ops are not in the production path; they are kept for
+continuity and because `adaptiveThreshold` is COOL's clearest regression.)
 
-The first Graviton4 run produced the opposite result — **0.76x, COOL slower than
-stock OpenCV**. Per-op data showed why:
+COOL's wins are real — `Canny` 1.49x, `resize` 1.33x, `cvtColor` 1.23x — but on
+this pipeline those operations together account for under 6% of runtime. The
+dominant op is a 1xN convolution, and COOL leaves it untouched at exactly 1.00x.
 
-| op | COOL | DIY | |
-|---|---|---|---|
-| `Canny` | — | — | 3.25x in COOL's favour |
-| `adaptiveThreshold` | 2.75 | 1.74 | **0.63x, COOL slower** |
+**This is the honest conclusion: COOL's benefit is entirely determined by which
+operations a workload happens to use, and the operation our classifier depends on
+is not among them.**
 
-`adaptiveThreshold` was ~74% of pipeline time (2.75 ms of 3.69 ms), so COOL's
-large `Canny` win was drowned out by one operation it happens to be bad at.
+---
 
-We then measured replacement detectors (`bench/detector_variants.py`), scoring
-both speed and recall on the sample set:
+## 2. Earlier weld pipeline — retained as a contrast, not a second product
 
-| variant | ms/call | clean | defect | damage | glare |
-|---|---|---|---|---|---|
-| `adaptiveThreshold(31,9)` | 2.428 | 0 | 1 | 6 | 2 |
-| `gaussTophat sigma=12` | 5.291 | 0 | 1 | 6 | 0 |
-| `gaussTophat sigma=4` | 1.392 | 0 | 1 | **0** | 0 |
-| `boxTophat k=13` | 0.827 | 0 | 1 | 2 | 0 |
-| **`boxTophat k=25`** | **0.920** | 0 | 1 | 6 | **0** |
-| `boxTophat k=41` | 0.845 | 0 | 1 | 6 | 3 |
-| `medianTophat k=15` | 14.743 | 0 | 0 | 0 | 0 |
-| `morphBlackhat k=15` | 1.948 | 1 | 2 | 1 | 0 |
+The pre-rewrite pipeline was Canny/blur/contour dominated. Same instances, same
+versions:
 
-(clean should be 0, defect/damage should be >0 — recall)
+| arm | library | OpenCV | fps | ms/frame |
+|---|---|---|---|---|
+| A | COOL | 4.14.0-pre | 893.42 | 1.12 |
+| B | DIY pip | 4.14.0 | 702.60 | 1.42 |
 
-**Chosen: `boxTophat k=25`** — `cv2.blur` is a box filter, O(1) per pixel
-regardless of kernel size, which is why k=25 costs 0.92 ms while a 25x25
-Gaussian (51x51 implied kernel) costs 5.29 ms.
+**A/B = 1.27x**, with `Canny` at 3.15x — exactly the op COOL accelerates.
 
-Two outcomes, both verified:
+Same hardware, same libraries, same measurement harness. **1.27x on one
+pipeline, 0.97x on the other.** We report both; we do not ship only the flattering
+one.
 
-1. **The application got 3.35x faster**: 3.69 → 1.10 ms/frame. No accuracy lost —
-   all five sample outcomes and blob counts are byte-identical
-   (`weld_defect` blobs=1, `weld_damage` blobs=6, `weld_clean` blobs=0).
-2. **COOL went from 0.76x to 1.28x**, because the operation it loses on is no
-   longer in the pipeline.
+---
 
-This is the most defensible part of the COOL submission: the speedup came from
-reading the profiler, not from tuning thresholds.
+## 3. Why we did not tune the pipeline to flatter COOL
 
-> **Final numbers after the evaluation-driven changes** (median-proportional
-> Canny thresholds + subsampled median). Re-verified on AWS:
-> **A COOL 893.42 fps (1.12 ms/frame), B DIY 702.60 fps (1.42 ms/frame),
-> A/B = 1.27x**; per-op `Canny` 3.15x, `GaussianBlur` 1.10x,
-> `adaptiveThreshold` 0.63x. Essentially unchanged — those fixes were
-> performance-neutral. See `docs/EVALUATION.md`.
+It would have been easy to drop the Gabor bank for cheaper features until COOL
+looked good. That is benchmark-fitting, not engineering: it would optimise for
+the measurement rather than the product. The steel classifier needs orientation
+selective texture features, and Gabor is the standard tool for that, so it stays.
 
-## Honest caveats
+## 4. A lead, not a result
 
-- **COOL is 1.28x, not the ~30x-adjacent numbers marketing implies.** The gain
-  is concentrated in `Canny`; six of eleven ops are within 6% of each other.
-- **`adaptiveThreshold` is a real COOL regression (0.62x)** on both Graviton4 and
-  Graviton2. Worth reporting to OpenCV; do not route dark-blob work through it.
-- **COOL image versions are not OpenCV 5.** Graviton2 image bundles 4.12,
-  Graviton4 bundles 4.14.0-pre — the Marketplace listing described the product as
-  "based on OpenCV 5", which does not match either image. The **application** runs
-  OpenCV 5.0.0 as the rules require; only the benchmark arms run 4.x, pinned to
-  match COOL so the delta is the library and not a major-version change.
-- **One sample set of 5 synthetic images.** No ground-truth labelled dataset, so
-  these are latency measurements, not accuracy claims.
-- Timings are **median of 30** after 5 discarded warmup iterations, single run
-  per arm, not repeated across instances.
+`gabor_filter2D_x16` uses 16 separate calls with 1xN column kernels. `filter2D`
+appears not to use a separable fast path for these, which is why 16 small
+convolutions cost 4.68 ms on a 128x128 image. Restructuring that is a genuine
+optimisation worth doing on its own merits — for COOL *and* for stock OpenCV. We
+have not done it, and it would help both arms equally, so it cannot change the
+A/B conclusion.
 
-## Method
+---
 
-- Workload mirrors `backend/app/vision.py` exactly (it must, or the benchmark
-  measures something judges never run).
-- Inputs generated **on the instance** by a seeded generator
-  (`SEED=20261006`), verified byte-identical across regenerations.
-- All arms pinned to the same OpenCV major.minor (`>=4.14.0,<4.15.0`). Pre-release
-  strings like `4.14.0-pre` do not resolve on PyPI, so the pin is a range.
+## 5. Method
 
-## Reproduction
+- Workload mirrors `backend/app/features.py` + `analysis.py` exactly.
+- Inputs are **real NEU photographs**, shipped inline as base64, byte-identical
+  on every arm.
+- Median of 30 iterations after 5 discarded warmups.
+- Both arms pinned to OpenCV `>=4.14.0,<4.15.0` so the delta is the library, not a
+  major-version change. Pre-release strings like `4.14.0-pre` do not resolve on
+  PyPI, hence a range.
+- Library self-identifies from `/opt/cool` or `/opt/opencv_install`, so the JSON
+  is itself proof of what executed.
+
+## 6. Reproduction
 
 ```powershell
 aws login
@@ -119,34 +113,28 @@ python aws\run_bench.py --region us-east-1 `
 python bench\show.py
 ```
 
-The orchestrator sorts COOL arms first and auto-pins the DIY control to COOL's
-detected major.minor, and prints a cost estimate before spending.
-
 AMI IDs (us-east-1):
 | arm | AMI | note |
 |---|---|---|
-| A | `ami-01db31139bc5615d8` | `COOL-Graviton4-v2-AMI-prod-k6u24vxijyzvg` |
-| A (alt) | `ami-03175684e1b021dda` | `COOL-graviton2-v2-prod-2jrbxn57qotcw` |
-| B / C | `ami-0bec8cef5313300ad` / `ami-0045d7fc2ad003464` | Ubuntu 24.04 arm64 / amd64 `20260923` |
+| A | `ami-01db31139bc5615d8` | `COOL-Graviton4-v2-AMI-prod-k6u24vxijyzvg`, OpenCV 4.14.0-pre |
+| B | `ami-0bec8cef5313300ad` | Ubuntu 24.04 arm64 `20260923`, `opencv-python>=4.14.0` |
 
 Helpers: `aws/find_ami_types.py` (DryRun instance-type probe, costs nothing),
-`aws/probe_cool_ami.py` (discovers a COOL install layout),
-`bench/detector_variants.py` (detector speed vs recall).
+`aws/probe_cool_ami.py` (discovers a COOL install layout).
 
-## Cost of these runs
+## 7. Cost
 
-`c8g.medium` at $0.072/h. Each A+B pair ~$0.015 in compute plus the COOL
-Marketplace licence fee; four pairs run plus probes and failed attempts, all
-well under **$1** and far inside the $25 cap. Every instance is terminated in a
-`finally` block; `describe-instances` confirmed zero left running after each.
+`c8g.medium` at $0.072/h; each A+B pair ~$0.015 plus the COOL licence fee. Every
+instance is terminated in a `finally` block.
 
-## Issues hit (full list in docs/CHALLENGES.md)
+## 8. Issues hit
 
-`UnsupportedOperation` for `t4g.*` on COOL images · 40 GB snapshot rejected by a
-hardcoded 20 GB volume · `/opt/cool` absent on Graviton2 (real path
-`/opt/opencv_install`) · `detect_build()` mislabelling COOL as DIY · env exports
-not persisting between SSM command entries · `libGL.so.1` missing · **unseeded
-RNG in the sample generator** · `exec >` swallowing later output · two JSON blobs
-in stdout · SSM reporting Success on a failed benchmark · version confound ·
-**and `>` in an unquoted pip spec being parsed as shell redirection**, so pip
-never ran.
+`UnsupportedOperation` for `t4g.*` on COOL images · 40 GB snapshot vs a hardcoded
+20 GB volume · `/opt/cool` absent on Graviton2 (real path `/opt/opencv_install`) ·
+`detect_build()` mislabelling COOL as DIY · env exports not persisting between
+SSM command entries · `libGL.so.1` missing · `exec >` swallowing later output ·
+two JSON blobs in stdout · SSM reporting Success on a failed benchmark ·
+**unquoted pip spec treated `>` as shell redirection** · **SendCommand 97 KB
+parameter cap** · **`getGaborKernel((0,0))` returning `(1,1)` kernels on 12 of 16
+orientations**, which silently crippled the feature bank until the kernel size was
+made explicit.
