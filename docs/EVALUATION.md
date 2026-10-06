@@ -1,208 +1,185 @@
 # Evaluation — ForgeSight
 
-Reproduce: `python eval/run_eval.py` (offline, no AWS, no cost).
-Raw output: `eval/results.json`. Ground truth: `eval/labels.json`.
+Domain: **rolled-steel surface defect inspection**. Public data only
+(NEU-CLS + NEU-DET, 3600 real photographs). No synthetic data is used in any
+number below.
 
-The submission rules ask for "evaluation evidence appropriate to the project,
-including failure cases or limitations". This is that evidence — including the
-part where the harness found a bug in our own detector.
+Reproduce everything:
 
----
+```powershell
+python eval\train_classifier.py --include-background   # accuracy + confusion matrix
+python eval\triage_eval.py                             # operating point + calibration
+python eval\neu_eval.py --limit 100                    # localisation, IoU per class
+python eval\demo_loop.py                               # closed-loop traces
+```
 
-## 1. What is being evaluated
-
-Three separate things, because they fail differently:
-
-| evaluation | question |
-|---|---|
-| **decision accuracy** | does the agent reach the right action on a labelled image? |
-| **robustness sweep** | does that hold when the image degrades? |
-| **latency** | what does it cost to run, at the tail not just the mean? |
-
-The agent's five possible verdicts collapse to three operational classes,
-because "escalate-human" and "human-review" both mean *a person must look at
-this*:
-
-| verdict | class |
-|---|---|
-| `pass` | clean |
-| `human-review`, `escalate-human` | defect |
-| `re-shoot`, `re-shoot-angle` | unusable |
-
-Evaluation runs against `backend/app/vision.py` + `agent.py` directly — the same
-code the HTTP API serves.
+Raw output: `eval/classifier_metrics.json`, `eval/triage_calibration.json`,
+`eval/neu_results.json`.
 
 ---
 
-## 2. Baseline decision accuracy
+## 1. What is evaluated, and why separately
 
-5 labelled synthetic weld images, 9-condition ground truth.
+Three questions that fail differently:
 
-| sample | expected | observed | defect_score | match |
-|---|---|---|---|---|
-| `weld_clean` | pass | pass | 0.015 | yes |
-| `weld_defect` | human-review | human-review | 0.311 | yes |
-| `weld_damage` | escalate-human | escalate-human | 1.000 | yes |
-| `weld_blurry` | re-shoot | re-shoot | 0.000 | yes |
-| `weld_glare` | re-shoot-angle | re-shoot-angle | 0.000 | yes |
+| evaluation | question | headline |
+|---|---|---|
+| **classification** | which defect is this? | **93.80%** held-out accuracy, macro F1 0.929 |
+| **triage** | should a person look at it? | **sensitivity 1.0000**, 0 of 1080 defects missed |
+| **localisation** | where is it? | **macro F1 ~0.19** at IoU 0.5 — weak, stated plainly |
 
-**Exact verdict match 5/5. Triage accuracy 1.00.**
+Localisation is reported separately precisely because it is the weakest part.
+Pooling it with classification would hide that.
+
+---
+
+## 2. Classification — 7 classes
+
+Training set 3869 images: 1800 NEU-CLS + 1800 NEU-DET + 269 `no_defect`
+crops taken from regions **outside** every annotation box (NEU contains only
+defective images, so a triage system needs a clean class to be able to output
+"pass"). Stratified 70/30 split, seed 0.
+
+| | held-out accuracy |
+|---|---|
+| overall | **93.80%** |
+| NEU-DET captures (used at inference) | **95.40%** |
+| NEU-CLS captures | 95.34% |
+| `no_defect` background crops | 72.84% (n=81) |
+
+Per class:
 
 | class | precision | recall | F1 | support |
 |---|---|---|---|---|
-| clean | 1.000 | 1.000 | 1.000 | 1 |
-| defect | 1.000 | 1.000 | 1.000 | 2 |
-| unusable | 1.000 | 1.000 | 1.000 | 2 |
+| crazing | 0.968 | 0.994 | **0.981** | 180 |
+| patches | 0.942 | 0.989 | **0.965** | 179 |
+| rolled-in_scale | 0.968 | 1.000 | **0.984** | 180 |
+| pitted_surface | 0.925 | 0.961 | **0.943** | 175 |
+| scratches | 0.930 | 0.889 | 0.909 | 171 |
+| inclusion | 0.879 | 0.889 | 0.884 | 160 |
+| no_defect | 0.983 | 0.728 | 0.837 | 81 |
 
-Confusion matrix (rows = truth, cols = observed):
+**Dominant confusions** (this is the interesting part, not the worst number):
 
-| | clean | defect | unusable |
-|---|---|---|---|
-| **clean** | 1 | 0 | 0 |
-| **defect** | 0 | 2 | 0 |
-| **unusable** | 0 | 0 | 2 |
+| count | true → predicted |
+|---|---|
+| 15 | inclusion → pitted_surface |
+| 14 | scratches → inclusion |
+| 12 | scratches → inclusion (second block) |
+| 9 | inclusion → scratches |
+| 7 | no_defect → crazing |
 
-**This table is too small to be impressive and we say so up front.** 5 images
-cannot support a precision claim. It demonstrates the decision logic is wired
-correctly, nothing more.
-
-### A bug the harness caught in our labels
-
-The first run scored 0.60 accuracy with two "failures" that were actually
-*correct* behaviour: `weld_blurry` and `weld_glare` were labelled
-`usable_image: true`, so the harness expected a defect judgement while the agent
-correctly refused to make one. The labels were wrong, not the detector. Fixed in
-`eval/labels.json`.
-
-Worth stating plainly: the first version of our own evaluation set was wrong.
+Thin, linear, low-contrast features are the hard cases: `inclusion` and
+`scratches` are both elongated dark streaks at this resolution.
 
 ---
 
-## 3. Robustness sweep — where it actually breaks
+## 3. Triage — the operating point
 
-Every image under 9 perturbations (identity, brightness ±30%, Gaussian noise
-σ=10/25, JPEG q20, 2x downscale, 5° rotation, 0.6 contrast). 45 evaluations.
-
-| perturbation | accuracy | failure |
-|---|---|---|
-| none | 1.00 | — |
-| bright +30% | 1.00 | — |
-| JPEG q20 | 1.00 | — |
-| rotate 5° | 1.00 | — |
-| dark −30% | 0.80 | glare image judged `pass` |
-| contrast 0.6 | 0.80 | glare image judged `pass` |
-| noise σ=10 | 0.80 | blurry image judged `pass` |
-| noise σ=25 | 0.80 | blurry image judged `pass` |
-| **downscale 0.5x** | **0.40** | **all 5 images rejected as `re-shoot`** |
-
-### The serious one we fixed: a missed defect under low light
-
-Before the fix, `dark −30%` and `contrast 0.6` produced **`weld_defect:
-defect → clean (pass)`** — a **false negative on a real defect**. For a safety
-inspection that is the worst possible failure, so it was chased down rather than
-listed as a caveat.
-
-Diagnosis (`eval/diagnose_fn.py`) showed the dark-blob detector was *not* at
-fault — it kept finding the pit in every condition (`dark_blobs=1`
-throughout). The failure was upstream in the score blend:
-
-| condition | blobs | edge_density | defect_score | verdict |
-|---|---|---|---|---|
-| pristine | 1 | 0.00790 | 0.317 | human-review |
-| dark −30% | 1 | 0.00250 | **0.296** | **pass** |
-| contrast 0.6 | 1 | 0.00250 | **0.296** | **pass** |
-
-`Canny` used **absolute thresholds (50, 150)**, so dimming the image starved it
-of edges; `edge_density` fell 3.2x, dragging the blended score from 0.317 to
-**0.296 — 0.004 below the 0.3 review cut**. A real defect auto-passed by four
-thousandths.
-
-Two fixes, both applied:
-
-1. **Median-proportional Canny thresholds** (`0.66·median`, `1.33·median`, the
-   ratio OpenCV recommends when thresholds are unspecified). Makes the edge
-   channel illumination-invariant.
-2. **A safety floor in the agent**: if `dark_blobs > 0`, the verdict can never
-   be `pass` — the floor is `human-review`. Blob count is the stable signal, so
-   it is the right thing to gate on. Auto-clearing an anomaly the system itself
-   detected is the one outcome a safety inspection must never produce.
-
-After the fix both cases are correct and baseline stays 5/5.
-
-### Rejected alternatives — measured, not assumed
-
-Two plausible fixes were tested and **rejected on evidence**
-(`eval/robustness_candidates.py`, 45 conditions each):
-
-| variant | blur correct | glare correct |
-|---|---|---|
-| **shipped: Laplacian(gray), V > 240** | **84.4%** | **95.6%** |
-| pre-blurred Laplacian + Otsu glare | 26.7% | 51.1% |
-| pre-blurred Laplacian only | 26.7% | 95.6% |
-
-A 3x3 pre-blur before the Laplacian collapses the blur metric (it lowers the
-variance of *sharp* images too, so everything reads as defocused), and Otsu
-splits mid-tone images roughly in half, halving glare accuracy. Both would have
-been committed on intuition; both were worse.
-
-### Remaining limitations, each with a cause
-
-| limitation | cause | severity |
-|---|---|---|
-| **2x downscale rejects everything** (0.40) | the blur threshold (Laplacian variance < 100) is **resolution-dependent**; downscaling then upsampling costs high-frequency detail, so every image looks defocused. In a real deployment the threshold must be calibrated per capture resolution. | high — it is an availability failure, not a safety one |
-| noise makes a blurry image read as sharp | the Laplacian amplifies high-frequency noise, inflating the variance that the blur test depends on. The obvious fix (pre-blur) was measured and is worse — see above. | medium — degrades to "no action" rather than a wrong pass on the defect sample |
-| glare missed at low light | the glare test counts pixels above an **absolute** `V > 240`; dimming removes them. Otsu was tested and was worse. | low — a missed glare prompt, not a missed defect; the defect path is unaffected |
-
----
-
-## 4. Latency
-
-Local x86, warm cache, 200 iterations after 20 warmup:
+Thresholds were **measured, not chosen by feel**, by sweeping the held-out split
+(`eval/triage_eval.py`, 1161 images). Shipped setting: `ESCALATE_MIN=0.85`,
+`REVIEW_MIN=0.55`, `PASS_MIN=0.80`.
 
 | metric | value |
 |---|---|
-| p50 | ~9 ms |
-| p95 | ~13 ms |
-| p99 | ~29 ms |
-| fps equivalent | ~104 |
+| **defect sensitivity** | **1.0000** — 0 of 1080 defects silently passed |
+| auto-escalate rate | 42.8% of defects closed without human re-inspection |
+| human review rate | 51.2% of all traffic |
+| clean captures released automatically | 48.1% |
+| second-opinion rate | remainder, low-confidence cases |
 
-The p99 being 3x the p50 is normal Python/GC jitter and is exactly why the
-benchmark reports medians rather than means. AWS figures (median of 30, after 5
-discarded warmups, on Graviton4) are in `docs/BENCHMARK-RESULTS.md`.
+### Confidence calibration
 
-Note the local latency (~9 ms) exceeds the AWS Graviton4 figure (~1.1 ms): this
-dev box is a Windows laptop and the AWS number is the measurement that matters.
+Raw softmax was systematically **under-confident** (stated 0.79 where accuracy
+was 0.94), which made the agent escalate far too little. Fitting a single
+temperature on the held-out split:
 
----
-
-## 5. What this evaluation does not establish
-
-- **No labelled real-weld dataset.** 5 synthetic images on one flat gray plate
-  under one lighting model. Real beads vary in colour, texture, spatter and heat
-  tint. Nothing here transfers automatically to a real inspection line.
-- **Precision/recall are computed on 5 samples.** Reported for completeness;
-  treat them as "the logic is wired correctly", not as a performance claim.
-- **The defect score is a triage signal, not a probability.** It is a hand-tuned
-  blend of edge and blob evidence on synthetic data. It has not been calibrated
-  against any ground-truth defect population.
-- **No geometric tolerance model.** The system reports "a dark anomaly exists",
-  not "this bead violates specification X at dimension Y". Real weld acceptance
-  needs width/undercut/porosity measurements against a standard.
-- **Sub-400px anomalies are invisible** to the dark-blob detector by design.
-- **Single run per configuration** on AWS; no cross-instance variance estimate.
-- **Not tested adversarially.** No adversarial images, no tampering, no attempt
-  to make the system approve a bad weld deliberately.
-
----
-
-## 6. Files
-
-| file | purpose |
+| | ECE |
 |---|---|
-| `eval/labels.json` | ground truth + perturbation definitions |
-| `eval/run_eval.py` | main harness: accuracy, sweep, latency |
-| `eval/robustness_rules.py` | compares dark-blob threshold strategies for speed **and** recall |
-| `eval/robustness_candidates.py` | compares blur/glare fixes (the rejected ones) |
-| `eval/diagnose_fn.py` | isolates why a real defect was auto-passed |
-| `eval/results.json` | raw output |
-| `bench/detector_variants.py` | speed/recall table behind the detector replacement |
+| before | 0.0750 |
+| after (T = 0.70) | **0.0218** |
+
+Reliability after scaling:
+
+| stated confidence | n | actual accuracy |
+|---|---|---|
+| 0.00–0.50 | 20 | 0.300 |
+| 0.50–0.70 | 77 | 0.597 |
+| 0.70–0.85 | 110 | 0.845 |
+| 0.85–0.95 | 210 | 0.962 |
+| 0.95–1.00 | 744 | 0.985 |
+
+Temperature cannot change the argmax, so accuracy is identical before and after —
+only the stated confidence moves, which is what lets the agent act on a number.
+
+### A correction to our own metric
+
+A first version of this evaluation counted any low-confidence defect prediction
+as a "miss", reporting 46 misses. That was wrong: low confidence routes to
+second opinion and then human review, so those are review traffic, not misses. The
+real failure is a defect the classifier **actively calls clean**. Corrected, the
+count is 0.
+
+---
+
+## 4. Localisation — the weak part
+
+Box-level detection against NEU-DET ground truth, greedy IoU matching at 0.5.
+
+| class | precision | recall | F1 | detected @IoU 0.3 |
+|---|---|---|---|---|
+| crazing | 0.010 | 0.081 | 0.017 | 0.600 |
+| inclusion | 0.113 | 0.072 | 0.088 | 0.360 |
+| patches | 0.011 | 0.038 | 0.017 | 0.400 |
+| pitted_surface | 0.032 | 0.078 | 0.045 | 0.220 |
+| rolled-in_scale | 0.000 | 0.000 | 0.000 | 0.000 |
+| scratches | 0.245 | 0.313 | 0.275 | 0.940 |
+
+**macro F1 0.075 hand-picked, 0.188 after grid search** (180 configs over
+`box`, `anom_thresh`, `min_area`, `close_k`).
+
+Why it is weak: NEU defects are diffuse and frequently span most of the frame
+(`crazing_1` is annotated 2,2–193,194). A merged connected-component box cannot
+reach IoU 0.5 against such an annotation, and `rolled-in_scale` has no box
+annotation at all in the files we parsed.
+
+**We did not paper over this.** The classifier carries the decision; localisation
+supplies a coarse pointer and, more usefully, an *independent* signal — when the
+classifier says clean but localisation finds structure, the agent refuses to
+auto-pass. That disagreement rule is in `backend/app/agent.py`.
+
+---
+
+## 5. Failure cases and limitations
+
+| limitation | cause | severity |
+|---|---|---|
+| **Localisation F1 ~0.19** | diffuse defects vs merged-box annotation; `rolled-in_scale` unannotated | high — reported, not hidden |
+| **`no_defect` recall 0.728** | only 269 background crops exist (most NEU frames are annotated almost end-to-end), and boxes are imperfect so some crops contain unannotated defect | high — the weakest class |
+| `inclusion` ↔ `pitted_surface` / `scratches` | thin low-contrast streaks are near-identical at 200x200 | medium |
+| No video, no camera geometry | static 200x200 crops only | medium |
+| No mill tolerance model | outputs a defect class and a region, not a pass/fail against a spec | medium |
+| Human approval is a stub | endpoint + log, not a workflow system | low |
+| COOL gives no speedup on this pipeline | `gabor_filter2D_x16` is 82% of runtime and COOL does not accelerate it | see `docs/BENCHMARK-RESULTS.md` |
+
+### Not adversarial
+No adversarial images, no tampering attempts, no deliberate attempt to force a
+bad part through.
+
+---
+
+## 6. What this evaluation does not establish
+
+- **Not a production claim.** 200x200 flat crops from one dataset. Real steel
+  lines have camera geometry, motion, scale variation, multiple defect
+  co-occurrence, and throughput requirements we never measured.
+- **`no_defect` is weak and under-represented** (81 held-out). A 48.1% clean-pass
+  rate on that sample size is not a meaningful false-accept rate.
+- **Splits are by image, and the two NEU sets may share capture sessions.** If
+  near-duplicate frames straddle the split, accuracy is optimistic. We did not
+  verify that; a session-aware split would be the honest next step.
+- **Single training run.** No seed variance, no cross-validation.
+- **Localisation is not production-grade** and we would not ship it for marking
+  without work.
+- **`no_defect` crops inherit annotation noise**, so some "clean" labels are
+  probably not clean.

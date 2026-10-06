@@ -26,6 +26,14 @@ from .capture import DEGRADATIONS, PRESETS, b64_jpeg, make
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 NEU_IMG = ROOT / "NEU-DET" / "NEU-DET" / "IMAGES"
+# Small re-encoded copies shipped with the app so the deployed instance has a
+# working demo even though the full NEU dataset is not redistributed (see
+# docs/DATASETS.md).
+FALLBACK_IMG = ROOT / "samples" / "neu"
+
+
+def _sample_dir():
+    return NEU_IMG if NEU_IMG.is_dir() else FALLBACK_IMG
 
 app = FastAPI(title="ForgeSight", version="1.0.0")
 
@@ -97,27 +105,24 @@ async def capture_degrade(file: UploadFile = File(...), preset: str = "clean"):
 @app.get("/samples")
 def samples():
     """A few labelled NEU images so the demo UI needs no external assets."""
-    picks = [
-        ("crazing_1.jpg", "crazing"),
-        ("inclusion_1.jpg", "inclusion"),
-        ("patches_1.jpg", "patches"),
-        ("pitted_surface_1.jpg", "pitted_surface"),
-        ("rolled-in_scale_1.jpg", "rolled-in_scale"),
-        ("scratches_1.jpg", "scratches"),
-    ]
+    d = _sample_dir()
+    if not d.is_dir():
+        return {"samples": []}
+    # Fallback copies are named neu_<class>_1.jpg; originals are <class>_1.jpg.
+    names = sorted(p.name for p in d.glob("*.jpg"))
     out = []
-    for fname, label in picks:
-        p = NEU_IMG / fname
-        if p.exists():
-            out.append({"file": fname, "label": label,
-                        "url": f"/samples/{fname}"})
-    return {"samples": out}
+    for fname in names:
+        stem = fname[4:] if fname.startswith("neu_") else fname
+        label = stem.rsplit("_", 1)[0].replace("-in_", "in_")
+        out.append({"file": fname, "label": label, "url": f"/samples/{fname}"})
+    return {"samples": out, "source": d.name}
 
 
 @app.get("/samples/{name}")
 def sample(name: str):
-    p = (NEU_IMG / name).resolve()
-    if not p.is_file() or NEU_IMG.resolve() not in p.parents:
+    d = _sample_dir().resolve()
+    p = (d / name).resolve()
+    if not p.is_file() or d not in p.parents:
         raise HTTPException(404, "no such sample")
     return FileResponse(p)
 
