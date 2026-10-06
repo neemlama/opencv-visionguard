@@ -6,5 +6,12 @@ venv/
 bench_result*.json
 bench_local*.json
 bench/results/*.json
+eval/.neu_cls_features*.npz
 *.mp4
 node_modules/
+
+# Third-party research datasets: not redistributed here. See docs/DATASETS.md.
+NEU-CLS/
+NEU-DET/
+archive/
+archive (1)/
