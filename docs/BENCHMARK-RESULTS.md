@@ -1,182 +1,144 @@
-# Benchmark Results — us-east-1, 2026-10-06
+# Benchmark Results — us-east-1
 
 Real AWS measurements. Raw JSON: `bench/results/comparison-us-east-1.json`.
-Format with `python bench\show.py`.
-
-Two pipelines were benchmarked on identical hardware with identical library
-versions. **They disagree, and that is the most useful thing we measured.**
+Format with `python bench\show.py`. Prices from the AWS Price List API via
+`python aws/instance_pricing.py`.
 
 ---
 
-## 1. Production pipeline — rolled-steel surface inspection (NEU)
+## 1. Definitive benchmark — COOL on OpenCV 5, correct prices, vCPU disclosed
 
-The pipeline the product actually runs: **8** Gabor `filter2D` responses, 2 Sobel
-gradients, magnitude, orientation histogram, 3 box blurs + `absdiff`, Laplacian,
-and the localiser (blur + absdiff + threshold + morphology + connected
-components).
+All arms run **OpenCV 5**. COOL comes from the Marketplace AMI
+`ami-033e481a24f94c8cb` ("Graviton5-COOL-v3"), verified on-instance as
+`libopencv_*.so.5.1.0` / `cv2.__version__ == 5.1.0-dev`. The DIY control is
+`opencv-python==5.0.0.93` — same major, closest stable release.
 
-| arm | instance | library | OpenCV | fps | ms/frame | USD/hr | **USD / 1000 frames** |
-|---|---|---|---|---|---|---|---|
-| A | `c8g.medium` Graviton4 | **COOL** | 4.14.0-pre | 300.38 | 3.33 | 0.072 | **0.000067** |
-| B | `c8g.medium` Graviton4 | DIY pip | 4.14.0 | 321.44 | 3.11 | 0.072 | 0.000062 |
-| C | `t3.medium` x86_64 | DIY pip | 4.14.0 | 269.62 | 3.71 | 0.0416 | **0.000043** |
+| arm | instance | vCPU | burstable | library | OpenCV | fps | ms/frame | USD/hr | **USD/1000 frames** |
+|---|---|---|---|---|---|---|---|---|---|
+| A | `c8g.medium` | 1 | no | **COOL** | 5.1.0-dev | 302.60 | 3.31 | 0.03988 | 3.7e-05 |
+| B | `c8g.medium` | 1 | no | DIY pip | 5.0.0 | 321.79 | 3.11 | 0.03988 | **3.4e-05** |
+| D | `c8g.large` | 2 | no | DIY pip | 5.0.0 | 330.43 | 3.03 | 0.07976 | 6.7e-05 |
+| C | `c7i.large` | 2 | no | DIY pip | 5.0.0 | 659.02 | 1.52 | 0.08925 | 3.8e-05 |
 
-| comparison | meaning | result |
+### The library question (COOL Award): A vs B
+
+**A/B = 0.94x — COOL is 6% *slower* than stock OpenCV** on identical hardware,
+identical OS, same OpenCV major version.
+
+This is now a **version-independent** result. We measured COOL on two different
+images and both agree:
+
+| COOL image | bundled OpenCV | A/B library-only |
 |---|---|---|
-| **A/B** | **library only** (same instance, same version) | **0.93x — COOL slower** |
-| A/C | COOL on Graviton vs DIY on x86 | **1.11x — Graviton wins throughput** |
-| B/C | DIY Graviton vs DIY x86 | 1.19x — the *hardware* wins, not COOL |
+| `COOL-Graviton4-v2-AMI` | 4.14.0-pre | 0.93x |
+| `Graviton5-COOL-v3` | **5.1.0-dev** | **0.94x** |
 
-### The three honest conclusions
+Per-op, COOL's wins are real but not in our hot path: `canny_legacy` 1.57x,
+`cvtColor` 1.24x, `connected_components` ~1.0x — while the dominant op,
+Gabor `filter2D`, is **1.00x**. `adaptiveThreshold` remains a COOL regression
+(0.57x).
 
-1. **COOL is not faster than stock OpenCV on our workload** (0.93x). The dominant
-   op is `gabor_filter2D`, which COOL leaves untouched.
-2. **Graviton is genuinely faster than x86 here** (1.19x DIY-on-DIY), and COOL
-   inherits that: A/C = 1.11x. Any A-vs-C headline is mostly a hardware result.
-3. **x86 is the cheapest per frame.** `t3.medium` ($0.0416/hr) is ~42% cheaper per
-   hour than `c8g.medium` ($0.072/hr), and its throughput deficit does not close
-   the gap: $0.000043 vs $0.000067 per 1000 frames. We tested this specifically
-   because "Graviton is cheaper" is a common claim and **it does not hold at these
-   instance sizes.** COOL's Marketplace licence fee is additional and is *not*
-   included in arm A's figure, so A's true cost is higher still.
+### The hardware/cost question
 
-### Per-op, COOL vs stock on identical hardware (A vs B)
+Two earlier claims of ours were **wrong** and are corrected here.
 
-| op | COOL faster by |
-|---|---|
-| `canny_legacy` (not in pipeline) | **1.57x** |
-| `cvtColor` | **1.24x** |
-| `connected_components` | ~1.0x |
-| `blur_box*`, `absdiff`, `morph_close` | ~1.0x |
-| `gabor_filter2D` (dominant op) | **1.00x** |
-| `adaptiveThreshold_legacy` (not in pipeline) | **0.57x** |
+**Wrong price.** We hardcoded `c8g.medium` at $0.072/hr. The Price List API says
+**$0.03988/hr**. Every cost figure we had published was ~1.8x too high for the
+Graviton arms.
 
-COOL's genuine wins (`Canny`, `cvtColor`) are not in our hot path, and the op that
-*is* in our hot path is the one COOL does not accelerate.
+**Wrong vCPU matching.** `c8g.medium` is **1 vCPU**; the `t3.medium` we compared
+against is **2 vCPU and burstable**, so the earlier "x86 is cheapest" claim
+compared different machines, one of them on burst credits.
 
-### Caveats on these figures
+Corrected readings:
 
-- **Single run per arm.** The B/C per-op ratios (up to 3.5x on trivial ops) are
-  larger than the end-to-end ratio and are probably inflated by run-to-run and
-  burstable-instance variance. `t3.medium` is a burstable family. Treat the
-  per-op table as indicative and the end-to-end numbers as the reliable ones.
-- COOL's licence fee is excluded from arm A.
-- Region: us-east-1. On-demand prices; no Savings Plans or Spot.
+| comparison | vCPU-matched? | result |
+|---|---|---|
+| D vs C (`c8g.large` vs `c7i.large`, 2 vCPU, both non-burstable) | yes | Intel **2.0x faster** (659 vs 330 fps) |
+| per-core: B (321.79 fps / 1 vCPU) vs C (659.02 / 2 vCPU) | yes | 322 vs 330 fps/vCPU — **within 2.4%** |
+| price per vCPU | yes | Graviton $0.03988 vs Intel $0.04462 — **Graviton 11% cheaper** |
+| cheapest USD/1000 frames | not matched | B (Graviton 1 vCPU) $3.4e-05 |
+
+**Honest summary:** per core the two are equivalent and Graviton is ~11% cheaper
+per vCPU, so Graviton wins narrowly on price-performance. In absolute throughput
+at matched vCPU, Intel wins decisively. Graviton's advantage is that it is
+*cheaper per unit of core*, not that it is faster per core.
+
+### Caveats
+
+- **Single run per arm.** Treat per-op ratios on cheap ops as indicative.
+- COOL's Marketplace licence fee is **not** in arm A's cost.
+- COOL is `5.1.0-dev`, a pre-release. The control is `5.0.0` stable. Same major
+  version, different minor.
+- Region us-east-1, on-demand, no Savings Plans or Spot.
 
 ---
 
-## 2. Feature-variant study — is a cheaper descriptor just as good?
+## 2. Feature-variant study — what the speedup actually measures
 
-Because COOL's benefit is op-dependent, the descriptor's composition determines
-the answer. `eval/feature_variants.py` trained each variant on the same
-leakage-free split:
+Earlier we quoted **2.20x**. That did **not reproduce**; it was a single local
+timing run on a contended laptop. Measured properly:
 
-| variant | Gabor filters | ms/frame | fps | accuracy |
+| variant | Gabor | features only | full pipeline | accuracy (6-class) |
 |---|---|---|---|---|
-| gabor16 (was production) | 16 | 12.589 | 79.4 | 95.37% |
-| **gabor8 (now production)** | **8** | **5.723** | **174.7** | **95.37%** |
-| gabor4 | 2 | 6.518 | 153.4 | 93.89% |
-| gabor0 (gradients only) | 0 | 5.841 | 171.2 | 90.19% |
+| gabor16 | 16 | 8.651 ms (115.6 fps) | 10.349 ms (96.6 fps) | 95.37% |
+| **gabor8 (shipped)** | **8** | **5.769 ms (173.4 fps)** | **7.309 ms (136.8 fps)** | **95.37%** |
+| gabor4 | 2 | 4.411 ms (226.7 fps) | 5.556 ms (180.0 fps) | 93.89% |
+| gabor0 | 0 | 4.092 ms (244.4 fps) | 5.091 ms (196.4 fps) | 90.19% |
 
-**Halving the Gabor bank is 2.20x faster at identical accuracy.** Dropping Gabor
-entirely costs 5.18 points, so orientation-selective texture is doing real work —
-it just does not need 16 convolutions.
+**Local: 1.50x features-only, 1.42x full-pipeline. AWS: ~1.83x full-pipeline**
+(5.68 ms → 3.11 ms on `c8g.large`/`c8g.medium`, medians of 30 after discarded
+warmup). The AWS figure is the one to quote.
 
-We adopted `gabor8`. Two honesty notes:
+Accuracy cost on the full 7-class task including `no_defect`:
+**93.08% → 92.75% (−0.33 points)**. Triage behaviour unchanged (0 missed defects,
+auto-pass precision 1.000). Dropping Gabor entirely saves little more and costs
+5.18 points, so orientation-selective texture earns its place — it just does not
+need 16 convolutions.
 
-- On the 6-class task above the accuracy was *exactly* equal. On the full 7-class
-  task including the `no_defect` class, gabor8 scores **92.75%** vs **93.08%** for
-  gabor16 — a real 0.33-point cost, not zero. Triage behaviour was unchanged
-  (0 missed defects, auto-pass precision 1.000) and the clean auto-pass rate
-  actually improved (42.0% → 45.7%).
-- This was **not** chosen to flatter COOL. It was adopted because 2.2x throughput
-  for 0.33 accuracy points is a good trade for a real-time inspection line, and
-  the measurement is published either way. COOL's position on the cheaper pipeline
-  is still parity (0.93x).
+Adopted because it is better product, not to flatter COOL. COOL is still 0.94x on
+it.
 
 ---
 
-## 3. Earlier weld pipeline — retained as a contrast, not a product
+## 3. Earlier weld pipeline — contrast only, not the product
 
-The pre-rewrite pipeline was Canny/blur/contour dominated. Same instances, same
-libraries, **before the Gabor kernel-size fix**, so it is a different pipeline
-measuring different work:
+Pre-Gabor-fix, Canny/blur/contour dominated. Different pipeline measuring
+different work; **its numbers must not be compared to section 1**:
 
-| arm | library | OpenCV | fps | ms/frame |
-|---|---|---|---|---|
-| A | COOL | 4.14.0-pre | 893.42 | 1.12 |
-| B | DIY pip | 4.14.0 | 702.60 | 1.42 |
+| arm | library | fps | ms/frame |
+|---|---|---|---|
+| A | COOL 4.14.0-pre | 893.42 | 1.12 |
+| B | DIY 4.14.0 | 702.60 | 1.42 |
 
-**A/B = 1.27x**, with `Canny` at 3.15x — the op COOL accelerates.
-
-Labelled explicitly: this is **not** the shipped pipeline and its numbers must not
-be compared against section 1. It exists to show that COOL's benefit is entirely a
-function of which operations a workload uses.
+**A/B = 1.27x**, `Canny` at 3.15x — the op COOL accelerates. Retained only to
+show that COOL's benefit is entirely a function of which operations a workload
+uses.
 
 ---
 
-## 3. Why we did not tune the pipeline to flatter COOL
-
-It would have been easy to drop the Gabor bank for cheaper features until COOL
-looked good. That is benchmark-fitting, not engineering: it would optimise for
-the measurement rather than the product. The steel classifier needs orientation
-selective texture features, and Gabor is the standard tool for that, so it stays.
-
-## 4. A lead, not a result
-
-`gabor_filter2D_x16` uses 16 separate calls with 1xN column kernels. `filter2D`
-appears not to use a separable fast path for these, which is why 16 small
-convolutions cost 4.68 ms on a 128x128 image. Restructuring that is a genuine
-optimisation worth doing on its own merits — for COOL *and* for stock OpenCV. We
-have not done it, and it would help both arms equally, so it cannot change the
-A/B conclusion.
-
----
-
-## 5. Method
-
-- Workload mirrors `backend/app/features.py` + `analysis.py` exactly.
-- Inputs are **real NEU photographs**, shipped inline as base64, byte-identical
-  on every arm.
-- Median of 30 iterations after 5 discarded warmups.
-- Both arms pinned to OpenCV `>=4.14.0,<4.15.0` so the delta is the library, not a
-  major-version change. Pre-release strings like `4.14.0-pre` do not resolve on
-  PyPI, hence a range.
-- Library self-identifies from `/opt/cool` or `/opt/opencv_install`, so the JSON
-  is itself proof of what executed.
-
-## 6. Reproduction
+## 4. Reproduction
 
 ```powershell
 aws login
-python aws\run_bench.py --region us-east-1 `
-    --arm "B=ami-0bec8cef5313300ad:c8g.medium" `
-    --arm "A=ami-01db31139bc5615d8:c8g.medium:cool"
+python aws\instance_pricing.py     # verify prices and vCPU counts
+python aws\run_bench.py --region us-east-1 --opencv-version 5.0.0.93 `
+    --arm "A=ami-033e481a24f94c8cb:c8g.medium:cool@0.03988" `
+    --arm "B=ami-0bec8cef5313300ad:c8g.medium@0.03988" `
+    --arm "D=ami-0bec8cef5313300ad:c8g.large@0.07976" `
+    --arm "C=ami-0045d7fc2ad003464:c7i.large@0.08925"
 python bench\show.py
 ```
 
-AMI IDs (us-east-1):
-| arm | AMI | note |
+COOL AMI versions available to this account:
+
+| AMI | name | OpenCV |
 |---|---|---|
-| A | `ami-01db31139bc5615d8` | `COOL-Graviton4-v2-AMI-prod-k6u24vxijyzvg`, OpenCV 4.14.0-pre |
-| B | `ami-0bec8cef5313300ad` | Ubuntu 24.04 arm64 `20260923`, `opencv-python>=4.14.0` |
+| `ami-033e481a24f94c8cb` | Graviton5-COOL-v3 | **5.1.0-dev** |
+| `ami-01db31139bc5615d8` | COOL-Graviton4-v2-AMI | 4.14.0-pre |
+| `ami-0b775ed8c83396c73` | COOL-V3 (G2 family) | 4.12.0 |
 
-Helpers: `aws/find_ami_types.py` (DryRun instance-type probe, costs nothing),
-`aws/probe_cool_ami.py` (discovers a COOL install layout).
+## 5. Cost of all benchmarking
 
-## 7. Cost
-
-`c8g.medium` at $0.072/h; each A+B pair ~$0.015 plus the COOL licence fee. Every
-instance is terminated in a `finally` block.
-
-## 8. Issues hit
-
-`UnsupportedOperation` for `t4g.*` on COOL images · 40 GB snapshot vs a hardcoded
-20 GB volume · `/opt/cool` absent on Graviton2 (real path `/opt/opencv_install`) ·
-`detect_build()` mislabelling COOL as DIY · env exports not persisting between
-SSM command entries · `libGL.so.1` missing · `exec >` swallowing later output ·
-two JSON blobs in stdout · SSM reporting Success on a failed benchmark ·
-**unquoted pip spec treated `>` as shell redirection** · **SendCommand 97 KB
-parameter cap** · **`getGaborKernel((0,0))` returning `(1,1)` kernels on 12 of 16
-orientations**, which silently crippled the feature bank until the kernel size was
-made explicit.
+Roughly 20 short-lived instances across the project, all terminated in `finally`
+blocks. **Under $1** against a $25 cap with no alarm triggered.

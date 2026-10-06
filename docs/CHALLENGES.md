@@ -394,3 +394,109 @@ included in arm A.
 **What we learned.** "Graviton is cheaper" is a family-level intuition that breaks
 down at small sizes, where the per-core advantage is offset by the rate card.
 Always measure cost per unit of work, not per hour.
+
+---
+
+## C-14 - Sensor noise made the agent auto-pass defective surfaces
+
+**Severity:** Critical, and the worst bug in the project. Found only because we
+wrote the ablation the award asks for.
+
+**Symptom.** `eval/agent_ablation.py` on 200 genuinely clean captures degraded by
+additive sensor noise: the loop **auto-passed 196 of 200**. A safety inspection
+saying "no defect" on a noisy frame is the failure mode that matters most.
+
+**Root cause.** The quality gate checked sharpness, glare, blown highlights and
+crushed shadows - but additive noise *raises* Laplacian variance, so a noisy
+frame measures as **sharper** than a clean one and sailed through every check. The
+classifier then confidently answered "no_defect" on noise texture.
+
+**Fix.** Added a robust noise estimate to the gate: MAD of the 3x3 high-pass
+response (median-based, so a real defect covering a few percent of pixels cannot
+inflate it). Threshold derived from 240 real captures
+(`eval/quality_gate_calibration.py`), not chosen by feel:
+
+| | noise_sigma p50 | p99 / p05 |
+|---|---|---|
+| clean NEU captures | 8.803 | p99 = 10.286 |
+| + sensor noise | 13.065 | p05 = 11.305 |
+
+Clean max (10.286) sits below noisy p05 (11.305), so `NOISE_MAX = 10.8` separates
+them cleanly.
+
+**Result. False accepts under noise: 196/200 -> 0/200.** The same calibration
+pass relaxed the glare and blown-highlight limits to clean p99 (0.05 / 0.035),
+removing spurious refusals on good captures.
+
+**What we learned.** A quality gate built from intuition inherits the blind spots
+of the intuition. Sharpness and noise are entangled - measuring one without the
+other is measuring neither.
+
+---
+
+## C-15 - Our published AWS prices were wrong, and a vCPU mismatch hid it
+
+**Severity:** High - an entire cost conclusion was an artefact.
+
+We hardcoded `c8g.medium` at **$0.072/hr**. The AWS Price List API says
+**$0.03988/hr**. Every cost-per-1000-frames figure we had published was ~1.8x
+too high for the Graviton arms.
+
+Worse, `c8g.medium` is **1 vCPU**. We had been comparing it against `t3.medium`
+which is **2 vCPU and burstable** - so the "x86 is cheapest per frame" conclusion
+compared different machines, one of them running on burst credits a short
+benchmark can abuse but production cannot sustain.
+
+**Fix.** `aws/instance_pricing.py` pulls rates from the Price List API and specs
+from `describe_instance-types`, and prints vCPU, burstability and $/hr/vCPU
+together. Replaced with a vCPU-matched, both-non-burstable pair
+(`c8g.large` vs `c7i.large`, 2 vCPU each) plus per-core normalisation.
+
+Two API shapes bit us on the way: `PriceList[i]` is a JSON *string* with prices
+under `terms.OnDemand.<term>`, and `priceDimensions` is a **dict** keyed by SKU,
+not a list - iterating it directly yields strings and the next `.get()` raises
+AttributeError.
+
+**What we learned.** Hardcoded cloud prices rot silently. A cost claim is a
+measurement, not a constant.
+
+---
+
+## C-16 - Retracted: the "2.20x" feature speedup did not reproduce
+
+We reported 2.20x for halving the Gabor bank. Re-measured properly, on the same
+leakage-free split:
+
+| | features only | full pipeline |
+|---|---|---|
+| local | 1.50x | 1.42x |
+| AWS (authoritative) | - | **1.83x** |
+
+The 2.20x came from a single local timing run on a contended laptop. The
+direction of the result held; the magnitude did not, and we had quoted it
+confidently. Now reported as 1.83x with the AWS basis stated, and the accuracy
+cost (-0.33 points) kept beside it.
+
+**What we learned.** A speedup measured on a shared dev box is a hypothesis. We
+had measurements on both; we quoted the flattering one.
+
+---
+
+## C-17 - Ablation metric bugs that briefly indicted the loop
+
+Two errors in `eval/agent_ablation.py`, both caught by sanity-checking output
+rather than by the code:
+
+1. `loop_result()` returned `d["first_prediction"]` **twice**, so first-prediction
+   and second-prediction were the same object and "decision changed" was
+   permanently **0** - while the live trace demonstrably changed class. Real rate
+   is 165/359.
+2. `correct()` did not handle `needs-second-opinion`, so an undecided loop was
+   scored as an error. This manufactured ~30 phantom "introduced errors".
+
+Also, the first ablation ran on a **defects-only** set, which makes every deferral
+look correct and flatters any agent. Added 200 real clean captures from
+unannotated regions.
+
+**What we learned.** An ablation that produces a suspiciously clean result
+usually has a bug, not a great system.

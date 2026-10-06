@@ -106,6 +106,19 @@ def median_time(fn, iters=40, warmup=8):
     return float(np.median(s) * 1e3)
 
 
+class _LazyClassifier:
+    """Minimal inference-only view of the fitted model, for timing."""
+
+    def __init__(self, W, b, mu, sd):
+        self.W, self.b, self.mu, self.sd = W, b, mu, sd
+
+    def predict_proba(self, X):
+        z = (X - self.mu) / self.sd @ self.W + self.b
+        z -= z.max(axis=1, keepdims=True)
+        e = np.exp(z)
+        return e / e.sum(axis=1, keepdims=True)
+
+
 def main():
     print("loading leakage-free split ...")
     images = []
@@ -137,19 +150,47 @@ def main():
         acc = float((P.argmax(1) == y[te]).mean())
 
         probe = images[0][0]
-        ms = median_time(lambda: descriptor(probe, scales, orients))
+        ms_feat = median_time(lambda: descriptor(probe, scales, orients))
+
+        # Full production path for the same descriptor: feature extraction PLUS
+        # classifier inference AND localisation. The 2.20x figure quoted earlier
+        # measured feature extraction only, so state both and do not conflate them.
+        img_bgr = cv2.cvtColor(probe, cv2.COLOR_GRAY2BGR)
+
+        def full():
+            g2 = to_gray(img_bgr, size=None) if False else img_bgr
+            feats = descriptor(to_gray(img_bgr), scales, orients)
+            clf = _LazyClassifier(W, b, mu, sd)
+            clf.predict_proba(feats[None, :])
+            an = cv2.absdiff(to_gray(img_bgr).astype(np.float32),
+                             cv2.blur(to_gray(img_bgr).astype(np.float32), (21, 21)))
+            _, binary = cv2.threshold(an, 8.0, 1.0, cv2.THRESH_BINARY)
+            mask = (binary * 255).astype(np.uint8)
+            mask = cv2.morphologyEx(
+                mask, cv2.MORPH_CLOSE,
+                cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9)))
+            cv2.connectedComponentsWithStats(mask, connectivity=8)
+
+        ms_full = median_time(full)
         n_gabor = len(scales) * len(orients)
         rows.append({"variant": name, "gabor_filters": n_gabor,
-                     "descriptor_len": int(X.shape[1]), "ms_per_frame": round(ms, 3),
-                     "fps": round(1000 / ms, 1), "accuracy": round(acc, 4),
+                     "descriptor_len": int(X.shape[1]),
+                     "ms_features_only": round(ms_feat, 3),
+                     "ms_full_pipeline": round(ms_full, 3),
+                     "fps_features_only": round(1000 / ms_feat, 1),
+                     "fps_full_pipeline": round(1000 / ms_full, 1),
+                     "accuracy": round(acc, 4),
                      "temperature": round(T, 3)})
         print(f"  {name:<26} gabor={n_gabor:<3} len={X.shape[1]:<4} "
-              f"{ms:6.3f} ms  {1000 / ms:7.1f} fps  acc={acc * 100:6.2f}%")
+              f"feat={ms_feat:6.3f}ms ({1000 / ms_feat:6.1f} fps)  "
+              f"full={ms_full:6.3f}ms ({1000 / ms_full:6.1f} fps)  acc={acc * 100:6.2f}%")
 
     base = rows[0]
     print(f"\nrelative to {base['variant']}:")
     for r in rows:
-        print(f"  {r['variant']:<26} speed {base['ms_per_frame'] / r['ms_per_frame']:.2f}x  "
+        print(f"  {r['variant']:<26} "
+              f"features {base['ms_features_only'] / r['ms_features_only']:.2f}x  "
+              f"full-pipeline {base['ms_full_pipeline'] / r['ms_full_pipeline']:.2f}x  "
               f"accuracy {r['accuracy'] * 100 - base['accuracy'] * 100:+.2f} pts")
 
     Path(ROOT / "eval" / "feature_variants.json").write_text(json.dumps({

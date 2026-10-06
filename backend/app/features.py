@@ -87,7 +87,16 @@ def quality_metrics(gray):
     # ("Unsupported combination of source format (=5), and destination format (=6)"),
     # so compute in CV_32F and widen in NumPy for an accurate variance.
     lap = cv2.Laplacian(g, cv2.CV_32F).astype(np.float64)
+    # Robust noise estimate: MAD of the 3x3 high-pass response. Median-based, so a
+    # real defect (a few percent of pixels) does not inflate it. Added after the
+    # agent ablation showed a safety failure: additive sensor noise RAISES
+    # Laplacian variance, so a noisy frame looks sharper and passed every existing
+    # gate check. Measured on 240 real NEU captures: clean p99 = 10.29,
+    # noisy p05 = 11.31 (eval/quality_gate_calibration.py).
+    hp = g - cv2.GaussianBlur(g, (3, 3), 0)
+    noise = float(1.4826 * np.median(np.abs(hp - np.median(hp))))
     return {
+        "noise_sigma": round(noise, 4),
         "sharpness": round(float(lap.var()), 2),
         "contrast": round(float(gray.std()), 2),
         "mean_intensity": round(float(gray.mean()), 2),

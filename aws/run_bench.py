@@ -83,8 +83,14 @@ def diy_install_cmd(opencv_version=""):
     COOL alone. The COOL AMIs bundle different majors (Graviton2 ships 4.12,
     Graviton4 ships 4.14.0-pre), and comparing across majors would confound the
     optimisation with a version change. Accepts a range like ">=4.14.0,<4.15.0".
+    If `opencv_version` contains a pip operator (==, >=, <) it is used as-is;
+    a bare version gets "==" so `--opencv-version 5.0.0.93` works instead of
+    silently producing the nonsense spec "opencv-python5.0.0.93".
     """
-    spec = f"opencv-python{opencv_version}" if opencv_version else "opencv-python"
+    v = (opencv_version or "").strip()
+    if v and not any(op in v for op in ("==", ">=", "<=", ">", "<", "~=")):
+        v = f"=={v}"
+    spec = f"opencv-python{v}" if v else "opencv-python"
     # Single-quote the spec: an unquoted "opencv-python>=4.14.0,<4.15.0" makes
     # bash treat ">" as output redirection, so pip never runs and cv2 is missing.
     spec_q = "'" + spec + "'"

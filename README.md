@@ -36,49 +36,59 @@ survey, so both are deduplicated and the split is grouped by source image
 |---|---|
 | defect classification, 7 classes | **92.75%** accuracy, macro F1 0.927 |
 | accuracy on the capture set used at inference | **94.81%** |
-| **missed defects** (test split) | **0 of 540** |
+| missed defects | **0 of 540** → sensitivity **≥ 99.44%** (95%, rule of three) |
 | **auto-pass precision** | **1.000** — nothing auto-passed was defective |
 | auto-escalate rate | 38.0% of defects closed without a human |
-| clean captures released automatically | 54.3% |
+| clean surfaces released automatically | 54.3% |
 | confidence calibration, ECE on test | **0.0338** (temperature fitted on validation) |
-| throughput after the feature study | **2.20x faster** than the 16-filter bank, −0.33 accuracy pts |
-| COOL vs stock OpenCV, library-only | **0.93x — COOL slower** |
-| COOL (Graviton) vs stock OpenCV (x86) | 1.11x — but that is the *hardware* |
-| cost per 1000 frames | Graviton $0.000067 vs x86 $0.000043 — **x86 is cheaper** |
+| **agent loop vs single-pass** | better in **all 6** capture conditions; **+0.157** on glare |
+| false accepts under sensor noise | **0 of 200** (was 196 before the noise gate) |
+| throughput, Gabor bank 16→8 | **1.83x** end-to-end on AWS, −0.33 accuracy pts |
+| COOL vs stock OpenCV 5, library-only | **0.94x — COOL slower** |
+| price per vCPU, Graviton vs Intel | Graviton $0.03988 vs Intel $0.04462 — **Graviton 11% cheaper** |
+| per-core throughput | 322 vs 330 fps/vCPU — within 2.4% |
 
 Two methodology leaks were found and fixed before any of these numbers were
-quoted: the dataset duplication above, and a temperature that had been fitted on
-the same split used to report ECE. Both are documented rather than quietly
-corrected.
+quoted: the dataset duplication, and a temperature fitted on the split used to
+report ECE. One safety failure was found by the ablation (196/200 false accepts
+under noise) and fixed. All are documented rather than quietly corrected.
 
 ## The COOL finding, stated plainly
 
-**COOL is not faster than stock OpenCV on our workload (0.93x), and it is not
-cheaper either.** The operation that dominates our pipeline is a Gabor
-`filter2D`, and COOL leaves it at 1.00x. COOL does accelerate `Canny` (1.57x) and
-`cvtColor` (1.24x), but those are not in our hot path.
+**COOL is 6% slower than stock OpenCV 5 on our workload (0.94x), and it does not
+help where we need it.** The operation that dominates our pipeline is a Gabor
+`filter2D`, and COOL leaves it at exactly 1.00x. COOL *does* accelerate `Canny`
+(1.57x) and `cvtColor` (1.24x), but neither is in our hot path.
 
-Two claims we tested rather than assumed, and which did **not** hold:
+This is now **version-independent**. We measured two different COOL images:
 
-- *"Graviton is cheaper per frame."* It is not, at these instance sizes.
-  `t3.medium` costs $0.000043 per 1000 frames vs `c8g.medium` at $0.000067,
-  because Graviton's hourly rate is ~42% higher at this size. COOL's licence fee
-  is additional and excluded from that figure.
-- *"COOL-accelerated ops dominate a vision pipeline."* They dominate the earlier
-  Canny-heavy pipeline (1.27x), not this one.
+| COOL image | bundled OpenCV | A/B library-only |
+|---|---|---|
+| `COOL-Graviton4-v2-AMI` | 4.14.0-pre | 0.93x |
+| `Graviton5-COOL-v3` | **5.1.0-dev** | **0.94x** |
 
-The one favourable comparison is COOL-on-Graviton vs stock-on-x86 at **1.11x** —
-but the DIY-on-Graviton arm is 1.19x, so that gap is the **hardware**, not COOL.
+Both images point the same way, so this is a property of our workload rather
+than of a build.
 
-We did not rewrite the feature bank to flatter COOL. When a cheaper bank turned
-out to be equally accurate we shipped it *because it is better product*, and
-published the trade-off. Full tables in `docs/BENCHMARK-RESULTS.md`.
+Three claims we previously made and have now **retracted**:
 
-**Open question we have asked the organiser:** our COOL image is a `-v2-` build
-bundling OpenCV **4.14**, while the Marketplace listing describes v3.1 as built on
-OpenCV **5.0**. Until that is resolved we are treating the main podium and the
-Agentic Vision Award as the realistic targets and COOL as a possible bonus. Draft
-email: `docs/EMAIL-opencv-org.md`.
+- *"COOL on Graviton beats stock on x86 (1.11x)."* The DIY-on-Graviton arm was
+  1.19x, so that gap was the hardware, not COOL.
+- *"Graviton is cheaper per frame."* Not at matched vCPU. Correct rates are
+  $0.03988/hr for `c8g.medium` (we had hardcoded $0.072) and `c8g.medium` is
+  **1 vCPU**, not 2. What *is* true: Graviton is ~11% cheaper per vCPU.
+- *"The feature change is 2.20x."* It did not reproduce. It is **1.83x** on AWS
+  and 1.42x locally.
+
+What we did **not** do: rewrite the feature bank to flatter COOL. When a cheaper
+bank turned out to be equally accurate we shipped it *because it is better
+product*, and published the trade-off either way. Full tables in
+`docs/BENCHMARK-RESULTS.md`.
+
+**Open question we have asked the organiser:** whether a COOL benchmark is
+eligible when the live API runs pip OpenCV 5 rather than COOL. Draft email:
+`docs/EMAIL-opencv-org.md`. Note we have since found a COOL image carrying
+**OpenCV 5.1**, which may make the question moot — awaiting their reply.
 
 ## Structure
 
@@ -93,6 +103,41 @@ email: `docs/EMAIL-opencv-org.md`.
 | `bench/bench.py`, `aws/run_bench.py` | 3-arm COOL benchmark on AWS Graviton4 |
 | `eval/` | training, calibration, localisation eval, loop demo |
 | `docs/` | evaluation, benchmark, challenges, cost guard |
+
+## What makes this agentic rather than a decision tree
+
+The award requires that visual evidence changes a later action. Three mechanisms,
+each measured on 740 real captures (`eval/agent_ablation.py`):
+
+| mechanism | evidence |
+|---|---|
+| **quality gate** refuses to classify an unusable capture, and names the physical fix | loop beats single-pass in all 6 conditions; **+0.157** on specular glare, **+0.037** on sensor noise |
+| **second opinion** applies a genuinely different perception (CLAHE local-contrast stretch) when confidence < 0.55 | fires 359 times, changes the class 165 times |
+| **disagreement check** — classifier says clean but localisation finds structure — refuses to auto-pass | independent cross-check on the classifier |
+
+**Reported honestly:** the second opinion changed the class 165 times but
+**corrected 0 errors and introduced 17**. Essentially all the loop's measured
+value comes from the quality gate. We do not claim otherwise.
+
+### Closed-loop demonstration
+
+`backend/app/capture.py` models **capture settings**, not pixel patches: a fix
+changes the camera setting (focus, exposure, polariser, denoise) and the scene is
+re-rendered, so the next perception is of a genuinely different frame. An earlier
+pixel-patch version could not converge — unsharp masking cannot undo blur, so
+the loop requested refocus forever.
+
+```
+iter 0: class=scratches confidence=0.404 margin=0.138
+   -> classifier not trusted on first look
+   -> second opinion: CLAHE local-contrast stretch, then re-classify
+iter 1: class=crazing confidence=0.874 margin=0.826
+   -> queue human review with region (workorder WO-8cb28f)
+```
+
+The UI labels this explicitly as **simulator mode**, and the plain HTTP path
+returns `re-capture` with `reason: no_capture_device_attached` rather than
+faking a fix.
 
 ## Run it
 

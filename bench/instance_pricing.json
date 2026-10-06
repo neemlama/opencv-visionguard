@@ -1,0 +1,70 @@
+{
+  "region": "us-east-1",
+  "prices": {
+    "c8g.medium": 0.03988,
+    "c8g.large": 0.07976,
+    "c7i.large": 0.08925,
+    "t3.medium": 0.0416,
+    "m6g.medium": 0.0385,
+    "c6g.large": 0.068,
+    "c6g.medium": 0.034
+  },
+  "specs": {
+    "c8g.medium": {
+      "vcpu": 1,
+      "memory_gib": 2,
+      "burstable": false,
+      "processor": [
+        "arm64"
+      ]
+    },
+    "c8g.large": {
+      "vcpu": 2,
+      "memory_gib": 4,
+      "burstable": false,
+      "processor": [
+        "arm64"
+      ]
+    },
+    "c7i.large": {
+      "vcpu": 2,
+      "memory_gib": 4,
+      "burstable": false,
+      "processor": [
+        "x86_64"
+      ]
+    },
+    "t3.medium": {
+      "vcpu": 2,
+      "memory_gib": 4,
+      "burstable": true,
+      "processor": [
+        "x86_64"
+      ]
+    },
+    "m6g.medium": {
+      "vcpu": 1,
+      "memory_gib": 4,
+      "burstable": false,
+      "processor": [
+        "arm64"
+      ]
+    },
+    "c6g.large": {
+      "vcpu": 2,
+      "memory_gib": 4,
+      "burstable": false,
+      "processor": [
+        "arm64"
+      ]
+    },
+    "c6g.medium": {
+      "vcpu": 1,
+      "memory_gib": 2,
+      "burstable": false,
+      "processor": [
+        "arm64"
+      ]
+    }
+  }
+}

@@ -1,0 +1,55 @@
+COOL on OpenCV 5, correct prices, agent ablation, and a critical noise fix
+
+ITEM 1 - TRIED v3.1 / OpenCV 5. ami-033e481a24f94c8cb "Graviton5-COOL-v3"
+bundles OpenCV 5.1.0-dev (libopencv_*.so.5.1.0) and runs on c8g.medium, the
+$0.03988 Graviton. Note the AMI "v3" label is NOT the OpenCV major: the G2-family
+COOL-V3 image is 4.12 and the G4-v2 is 4.14. So all arms now run OpenCV 5:
+  A COOL 5.1.0-dev c8g.medium  302.60 fps
+  B DIY  5.0.0      c8g.medium  321.79 fps
+  A/B = 0.94x. Version-independent now: the 4.14 image gave 0.93x. Same
+  conclusion on two different COOL builds, so it is a property of our workload.
+
+ITEM 2a - PRICE WAS WRONG. c8g.medium is $0.03988/hr, not the $0.072 I
+hardcoded; every cost figure we published was ~1.8x too high. New
+aws/instance_pricing.py pulls rates from the Price List API and specs from
+describe-instance-types. Two API shapes bit us: PriceList[i] is a JSON string with
+prices under terms.OnDemand, and priceDimensions is a dict keyed by SKU.
+
+ITEM 2b - vCPU MISMATCH CONFIRMED. c8g.medium is 1 vCPU; t3.medium is 2 vCPU AND
+burstable. The 'x86 is cheapest' claim compared different machines, one on burst
+credits. Replaced with vCPU-matched, both-non-burstable arms:
+  D DIY c8g.large 2vCPU  330.43 fps  $0.07976/h
+  C DIY c7i.large 2vCPU  659.02 fps  $0.08925/h
+  -> Intel 2.0x faster at matched vCPU. BUT per core: 322 vs 330 fps/vCPU
+     (within 2.4%), and Graviton is 11% cheaper per vCPU. So Graviton wins
+     narrowly on price-per-core, not throughput-per-core. Reported both ways.
+
+ITEM 3 - TRIAGE WITH AN INTERVAL. 0 of 540 missed -> sensitivity point estimate
+1.0000, but quoted as >= 99.44% at 95% (rule of three, 3/540 upper bound on miss
+rate) because 'perfect from 540 samples' is not a measurement of perfection.
+Review-rate-vs-threshold curve reported: auto-escalate falls 50.7% -> 27.4% as
+ESCALATE_MIN rises 0.50 -> 0.95 with misses at 0 throughout, so the threshold
+buys automation not safety. Stated that 51% review is high.
+no_defect shortcut check: no evidence of one (lowest recall 0.790 of any class,
+precision 0.970, confusions are texture-in-crop not geometry), but NOT proven
+clean because crops inherit annotation noise. Flagged as open.
+
+ITEM 4 - ABLATION FOUND A CRITICAL SAFETY BUG. eval/agent_ablation.py on 740
+real captures (540 defect + 200 genuinely clean): the loop auto-passed 196 of 200
+clean captures under sensor noise. Additive noise RAISES Laplacian variance, so
+noisy frames read as sharper and passed every gate check.
+Fixed with a MAD high-pass noise estimate, threshold from 240 real captures:
+clean p99 = 10.286, noisy p05 = 11.305, so NOISE_MAX = 10.8. False accepts
+196/200 -> 0/200. Same calibration relaxed glare/blown limits to clean p99.
+Loop now beats single-pass in ALL SIX conditions (+0.157 glare, +0.037 noise).
+Reported honestly: the second opinion fires 359x and changes the class 165x but
+corrects 0 errors and introduces 17 - the gate does the work, not the reasoning.
+Also found and fixed two ablation metric bugs (returned first_prediction twice so
+'changed' was always 0; needs-second-opinion unhandled in correct()) and made the
+set defects-only -> balanced, since deferral always looks correct on defects.
+
+ITEM 5 - 2.20x RETRACTED. Re-measured: 1.50x features-only / 1.42x full-pipeline
+local, 1.83x on AWS (authoritative). -0.33 accuracy points kept beside it.
+
+All in docs/EVALUATION.md and docs/BENCHMARK-RESULTS.md. CHALLENGES.md gains
+C-14..C-17.

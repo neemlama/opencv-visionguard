@@ -120,32 +120,38 @@ class and `no_defect` recall is limited by having only 269 crops to learn from.
 
 ---
 
-## 3. Triage — the operating point, with the context it needs
+## 3. Triage — the operating point, with an interval
 
 A system that sends everything to a human also misses zero defects. **Sensitivity
-alone is therefore meaningless**, so it is reported with the rate of automatic
-decisions and the precision of the automatic passes.
+alone is meaningless**, so it is reported with an interval, the automation rate,
+and the precision of automatic passes.
 
-Thresholds were measured, not chosen by feel, by sweeping the held-out test split
-(`eval/triage_eval.py`, 621 images: 540 defect, 81 clean). Shipped setting
-`ESCALATE_MIN=0.85`:
+Leakage-free test split, 621 rows (540 defect, 81 clean), thresholds swept by
+`eval/triage_eval.py`. Shipped setting `ESCALATE_MIN=0.85`:
 
 | metric | value |
 |---|---|
-| **defect sensitivity** | **1.0000** — 0 of 540 defects silently passed |
-| missed defects | **0** |
-| **auto-pass precision** | **1.000** — of images auto-passed, all genuinely clean |
+| **missed defects** | **0 of 540** |
+| sensitivity, point estimate | 1.0000 |
+| **sensitivity, 95% lower bound (rule of three)** | **≥ 0.9944** |
+| **auto-pass precision** | **1.000** — nothing auto-passed was defective |
 | auto-pass rate | 7.1% of all traffic |
-| clean images released automatically | 54.3% (clean_reviewed 45.7%) |
+| clean surfaces released automatically | 54.3% |
 | auto-escalate rate | 38.0% of defects closed without human re-inspection |
 | human review rate | 51.0% of all traffic |
 | second-opinion rate | 2.9% of all traffic |
 
-Sensitivity is 1.0000 at **every** threshold from 0.50 to 0.95, so the threshold is
-not buying safety — it is buying automation. At 0.85 the system auto-closes 38% of
-defects, auto-passes clean captures with 100% precision, and still sends the
-reviewable remainder to a person. That is a real triage operating point, not a
-system that defers everything.
+**On the interval.** With 0 misses in 540, the rule of three gives a 95% upper
+bound on the miss rate of 3/540 = 0.56%, so sensitivity is **≥ 99.44%** at 95%
+confidence. We quote that rather than 1.0000, because a point estimate of
+"perfect" from 540 samples is not a measurement of perfection.
+
+**On the 51% review rate.** It is high, and we say so. Sensitivity is 1.0000 at
+*every* threshold from 0.50 to 0.95, so the threshold is not buying safety — it is
+buying automation. The sweep in `eval/triage_calibration.json` shows
+auto-escalate falling from 50.7% to 27.4% as the threshold rises, with misses
+staying at 0 throughout. A deployment would trade along that curve; we picked 0.85
+rather than the most aggressive 0.50.
 
 ### Confidence calibration (fitted on validation, reported on test)
 
@@ -157,25 +163,102 @@ system that defers everything.
 | 0.85–0.95 | 120 | 0.933 |
 | 0.95–1.00 | 360 | 0.992 |
 
-The model remains mildly **under**-confident in the mid bands, so
-`ESCALATE_MIN=0.85` is conservative rather than aggressive.
-
-### A correction to our own metric
-
-An earlier version counted any low-confidence defect prediction as a "miss",
-reporting 46 misses. That was wrong: low confidence routes to second opinion and
-then human review, so those are review traffic, not misses. The real failure is a
-defect the classifier **actively calls clean**. Corrected, the count is 0.
+Mildly **under**-confident in the mid bands, so `ESCALATE_MIN=0.85` is
+conservative rather than aggressive. ECE on test: 0.0886 → **0.0338** after
+temperature scaling (T = 0.75, fitted on validation).
 
 ---
 
-## 3a. Accuracy versus latency
+## 4. Agentic ablation — does the loop earn its place?
 
-See `docs/BENCHMARK-RESULTS.md` §2 for the full table. Halving the Gabor bank
-(16 → 8) is **2.20x faster**; on the 7-class task it costs 0.33 accuracy points
-(93.08% → 92.75%) and leaves triage behaviour unchanged. Adopted, because
-throughput matters on an inspection line and 92.75% is still strong. Dropping
-Gabor entirely would save little more and costs 5.18 points.
+`eval/agent_ablation.py`, 740 real captures (540 defect from the leakage-free
+test split + 200 genuinely clean crops from unannotated regions). Single-pass =
+one perception then decide. Loop = quality gate + second opinion on low
+confidence + classifier/localiser disagreement check.
+
+| condition | single-pass | loop | delta | 2nd opinion fired | class changed | errors fixed | errors introduced | false accepts (of 200 clean) |
+|---|---|---|---|---|---|---|---|---|
+| clean | 0.7000 | 0.7162 | +0.0162 | 0.169 | 56 | 0 | 2 | 2 |
+| soft focus | 0.7243 | 0.7297 | +0.0054 | 0.000 | 0 | 0 | 0 | 0 |
+| under-exposed | 0.6770 | 0.6946 | +0.0176 | 0.137 | 53 | 0 | 9 | 1 |
+| **specular glare** | 0.5730 | 0.7297 | **+0.1568** | 0.000 | 0 | 0 | 0 | 0 |
+| low contrast | 0.7027 | 0.7081 | +0.0054 | 0.180 | 56 | 0 | 6 | 3 |
+| **sensor noise** | 0.3108 | 0.3473 | **+0.0365** | 0.000 | 0 | 0 | 0 | **0** |
+
+**The loop beats single-pass in every condition**, and the gain concentrates
+exactly where it should: on captures that are not fit to judge.
+
+### The honest decomposition — the gate works, the second opinion does not
+
+Across all conditions the second opinion **fired 359 times and changed the class
+165 times, yet corrected 0 errors and introduced 17.** Essentially all of the
+loop's measured value comes from the **capture-quality gate**, which refuses to
+classify unusable frames, not from the second-opinion reasoning.
+
+We report that rather than quoting the +0.157 glare figure alone. The second
+opinion currently costs a little accuracy and buys caution; it is not earning its
+place and we would not claim it does.
+
+### A safety failure this ablation found, and we fixed
+
+The first run of this ablation showed the loop **auto-passed 196 of 200 clean
+captures under sensor noise**. Root cause: the gate checked sharpness, glare and
+clipping, but additive noise *raises* Laplacian variance, so a noisy frame reads as
+*sharper* than a clean one and passed every check. The classifier then confidently
+answered "no defect" on noise.
+
+Fixed by adding a robust noise estimate to the gate — MAD of the 3x3 high-pass
+response, median-based so a real defect cannot inflate it. Threshold derived from
+240 real captures (`eval/quality_gate_calibration.py`):
+
+| | noise_sigma p50 | p99 / p05 |
+|---|---|---|
+| clean NEU captures | 8.803 | p99 = 10.286 |
+| + sensor noise | 13.065 | p05 = 11.305 |
+
+Clean max (10.286) sits below noisy p05 (11.305), so **NOISE_MAX = 10.8**
+separates them. False accepts under noise: **196/200 → 0/200.** The same
+calibration pass relaxed the glare and blown-highlight limits to clean p99
+(0.05 / 0.035), which removed spurious refusals on good captures.
+
+This is the clearest argument for running the ablation at all: a metric we added
+for the award found a defect that would have shipped.
+
+---
+
+## 5. Accuracy versus latency
+
+`docs/BENCHMARK-RESULTS.md` §2. Halving the Gabor bank is **1.83x** end-to-end on
+AWS (1.42x on this laptop) for **−0.33 accuracy points** on the 7-class task,
+with triage behaviour unchanged. An earlier **2.20x** figure did not reproduce and
+is retracted.
+
+---
+
+## 6. A shortcut we checked for, and did not find
+
+`no_defect` crops are taken from regions *outside* annotation boxes in the same
+photographs as the defect crops, so the classifier could in principle learn
+"crop boundary / flat texture = clean" rather than "no defect = clean".
+
+**Test:** background crops and defect images come from the same 200x200 captures
+with the same sensor and lighting, so a shortcut would have to be geometric rather
+than photometric. The measured evidence against a shortcut:
+
+- `no_defect` is the **hardest** class to learn from — only 269 crops exist,
+  because most NEU frames are annotated almost end-to-end — and it has the
+  **lowest recall (0.790)** of any class. A shortcut would give high recall.
+- Its precision is 0.970: when it says clean it is almost always right, but it
+  misses clean surfaces. That is the signature of an under-powered signal, not a
+  leaked one.
+- Its dominant confusions are `no_defect → inclusion` (6) and
+  `no_defect → rolled-in_scale` (4) — texture inside the crop being read as
+  defect, which is a genuine ambiguity, not a label artefact.
+
+**Not proven clean, though.** The crop regions inherit annotation noise, so some
+"clean" crops almost certainly contain unannotated defect. A cleaner test would
+need genuinely defect-free steel, which NEU does not provide. We flag this as an
+open methodological weakness rather than claiming it resolved.
 
 ---
 

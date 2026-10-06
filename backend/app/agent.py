@@ -47,9 +47,13 @@ def _step(trace, perception, decision, action, evidence=None):
 def quality_fixes(quality):
     """Map a failed quality gate to the physical fix that addresses it."""
     fixes = []
+    if quality.get("noise_sigma", 0) > 10.8:
+        # Highest priority: noise masquerades as sharpness, so every other check
+        # passes while the frame is unusable.
+        fixes.append("denoise")
     if quality["sharpness"] < 12.0:
         fixes.append("steady_and_refocus")
-    if quality["glare_ratio"] > 0.04 or quality["blown_highlights"] > 0.02:
+    if quality["glare_ratio"] > 0.05 or quality["blown_highlights"] > 0.035:
         fixes.append("change_angle_or_polarizer")
     if quality["mean_intensity"] < 90:
         fixes.append("raise_exposure")

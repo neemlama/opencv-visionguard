@@ -28,10 +28,16 @@ SEVERE_CLASSES = ("inclusion", "rolled-in_scale", "pitted_surface")
 
 # Quality gate thresholds. Set from the NEU capture distribution, and recorded
 # here rather than buried in the agent so they can be argued with.
-SHARPNESS_MIN = 12.0        # Laplacian variance; below this the frame is soft
-GLARE_MAX = 0.04            # fraction of near-saturated pixels
-BLOWN_MAX = 0.02            # clipped highlights
-CRUSHED_MAX = 0.05          # crushed shadows
+# Quality gate thresholds, all derived from measured distributions on 240 real
+# NEU captures (eval/quality_gate_calibration.py), not chosen by feel.
+SHARPNESS_MIN = 12.0        # Laplacian variance; real captures sit at 1025+
+GLARE_MAX = 0.05            # clean p99 = 0.0427
+BLOWN_MAX = 0.035           # clean p99 = 0.0267
+CRUSHED_MAX = 0.05          # never fires on clean data
+# Sensor noise RAISES Laplacian variance, so a noisy frame reads as sharper and
+# slips past every other check. Without this the loop auto-passed 196 of 200
+# clean captures under noise. Clean p99 = 10.29, noisy p05 = 11.31.
+NOISE_MAX = 10.8
 
 _MODEL = None
 
@@ -92,6 +98,7 @@ def analyze(image, model=None):
         and quality["glare_ratio"] <= GLARE_MAX
         and quality["blown_highlights"] <= BLOWN_MAX
         and quality["crushed_shadows"] <= CRUSHED_MAX
+        and quality["noise_sigma"] <= NOISE_MAX
     )
 
     feats = np.asarray(describe(gray), dtype=np.float64)

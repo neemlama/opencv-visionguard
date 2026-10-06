@@ -1,0 +1,186 @@
+{
+  "conditions": [
+    {
+      "preset": "clean",
+      "n": 740,
+      "single_pass_accuracy": 0.7,
+      "loop_accuracy": 0.7162,
+      "delta": 0.0162,
+      "second_opinion_fired": 125,
+      "second_opinion_rate": 0.1689,
+      "decision_changed": 56,
+      "errors_corrected": 0,
+      "errors_introduced": 2,
+      "net_impact": -2,
+      "gate_refused_unusable": 104,
+      "gate_refusal_rate": 0.1405,
+      "n_clean": 200,
+      "false_accepts_single_pass": 2,
+      "false_accepts_loop": 2,
+      "false_accept_rate_loop": 0.01,
+      "single_pass_dist": {
+        "escalate-human": 70,
+        "guess-low-confidence": 139,
+        "human-review": 505,
+        "pass": 26
+      },
+      "loop_dist": {
+        "escalate-human": 72,
+        "human-review": 444,
+        "needs-second-opinion": 14,
+        "pass": 14,
+        "re-capture": 196
+      }
+    },
+    {
+      "preset": "soft_focus",
+      "n": 740,
+      "single_pass_accuracy": 0.7243,
+      "loop_accuracy": 0.7297,
+      "delta": 0.0054,
+      "second_opinion_fired": 0,
+      "second_opinion_rate": 0.0,
+      "decision_changed": 0,
+      "errors_corrected": 0,
+      "errors_introduced": 0,
+      "net_impact": 0,
+      "gate_refused_unusable": 740,
+      "gate_refusal_rate": 1.0,
+      "n_clean": 200,
+      "false_accepts_single_pass": 0,
+      "false_accepts_loop": 0,
+      "false_accept_rate_loop": 0.0,
+      "single_pass_dist": {
+        "escalate-human": 172,
+        "guess-low-confidence": 36,
+        "human-review": 528,
+        "pass": 4
+      },
+      "loop_dist": {
+        "re-capture": 740
+      }
+    },
+    {
+      "preset": "under_exposed",
+      "n": 740,
+      "single_pass_accuracy": 0.677,
+      "loop_accuracy": 0.6946,
+      "delta": 0.0176,
+      "second_opinion_fired": 101,
+      "second_opinion_rate": 0.1365,
+      "decision_changed": 53,
+      "errors_corrected": 0,
+      "errors_introduced": 9,
+      "net_impact": -9,
+      "gate_refused_unusable": 40,
+      "gate_refusal_rate": 0.0541,
+      "n_clean": 200,
+      "false_accepts_single_pass": 1,
+      "false_accepts_loop": 1,
+      "false_accept_rate_loop": 0.005,
+      "single_pass_dist": {
+        "escalate-human": 25,
+        "guess-low-confidence": 104,
+        "human-review": 570,
+        "pass": 41
+      },
+      "loop_dist": {
+        "escalate-human": 54,
+        "human-review": 557,
+        "needs-second-opinion": 12,
+        "pass": 28,
+        "re-capture": 89
+      }
+    },
+    {
+      "preset": "specular_glare",
+      "n": 740,
+      "single_pass_accuracy": 0.573,
+      "loop_accuracy": 0.7297,
+      "delta": 0.1568,
+      "second_opinion_fired": 0,
+      "second_opinion_rate": 0.0,
+      "decision_changed": 0,
+      "errors_corrected": 0,
+      "errors_introduced": 0,
+      "net_impact": 0,
+      "gate_refused_unusable": 740,
+      "gate_refusal_rate": 1.0,
+      "n_clean": 200,
+      "false_accepts_single_pass": 34,
+      "false_accepts_loop": 0,
+      "false_accept_rate_loop": 0.0,
+      "single_pass_dist": {
+        "escalate-human": 57,
+        "guess-low-confidence": 154,
+        "human-review": 345,
+        "pass": 184
+      },
+      "loop_dist": {
+        "re-capture": 740
+      }
+    },
+    {
+      "preset": "low_contrast",
+      "n": 740,
+      "single_pass_accuracy": 0.7027,
+      "loop_accuracy": 0.7081,
+      "delta": 0.0054,
+      "second_opinion_fired": 133,
+      "second_opinion_rate": 0.1797,
+      "decision_changed": 56,
+      "errors_corrected": 0,
+      "errors_introduced": 6,
+      "net_impact": -6,
+      "gate_refused_unusable": 60,
+      "gate_refusal_rate": 0.0811,
+      "n_clean": 200,
+      "false_accepts_single_pass": 3,
+      "false_accepts_loop": 3,
+      "false_accept_rate_loop": 0.015,
+      "single_pass_dist": {
+        "escalate-human": 62,
+        "guess-low-confidence": 142,
+        "human-review": 510,
+        "pass": 26
+      },
+      "loop_dist": {
+        "escalate-human": 89,
+        "human-review": 456,
+        "needs-second-opinion": 9,
+        "pass": 22,
+        "re-capture": 164
+      }
+    },
+    {
+      "preset": "sensor_noise",
+      "n": 740,
+      "single_pass_accuracy": 0.3108,
+      "loop_accuracy": 0.3473,
+      "delta": 0.0365,
+      "second_opinion_fired": 0,
+      "second_opinion_rate": 0.0,
+      "decision_changed": 0,
+      "errors_corrected": 0,
+      "errors_introduced": 0,
+      "net_impact": 0,
+      "gate_refused_unusable": 455,
+      "gate_refusal_rate": 0.6149,
+      "n_clean": 200,
+      "false_accepts_single_pass": 200,
+      "false_accepts_loop": 0,
+      "false_accept_rate_loop": 0.0,
+      "single_pass_dist": {
+        "guess-low-confidence": 4,
+        "human-review": 26,
+        "pass": 710
+      },
+      "loop_dist": {
+        "human-review": 2,
+        "pass": 283,
+        "re-capture": 455
+      }
+    }
+  ],
+  "note": "single-pass = one perception then decide; loop = quality gate + second opinion on low confidence + disagreement check"
+}
