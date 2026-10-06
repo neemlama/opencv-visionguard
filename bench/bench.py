@@ -73,42 +73,58 @@ def bench_ops(img, iters: int, warmup: int) -> dict:
     gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blurred, 50, 150)
+    bg = cv2.blur(gray, (25, 25))
+    tophat = cv2.subtract(bg, gray)
 
     timed_ops = {
         "resize": timed(lambda: cv2.resize(img, (640, 480)), iters, warmup),
+        "cvtColor": timed(lambda: cv2.cvtColor(small, cv2.COLOR_BGR2GRAY), iters, warmup),
         "GaussianBlur": timed(lambda: cv2.GaussianBlur(gray, (5, 5), 0), iters, warmup),
-        "adaptiveThreshold": timed(
+        "blur_box25": timed(lambda: cv2.blur(gray, (25, 25)), iters, warmup),
+        "Canny": timed(lambda: cv2.Canny(blurred, 50, 150), iters, warmup),
+        "subtract": timed(lambda: cv2.subtract(bg, gray), iters, warmup),
+        "threshold": timed(lambda: cv2.threshold(tophat, 18, 255, cv2.THRESH_BINARY),
+                          iters, warmup),
+        "morphOpen": timed(
+            lambda: cv2.morphologyEx(
+                tophat, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)
+            ),
+            iters, warmup),
+        "findContours": timed(
+            lambda: cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE),
+            iters, warmup,
+        ),
+        "dilate": timed(lambda: cv2.dilate(edges, None, iterations=1), iters, warmup),
+        # Kept for continuity with earlier runs: the op we replaced, and the one
+        # COOL measurably regresses on.
+        "adaptiveThreshold_legacy": timed(
             lambda: cv2.adaptiveThreshold(
                 gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 9
             ),
-            iters,
-            warmup,
+            iters, warmup,
         ),
-        "Canny": timed(lambda: cv2.Canny(blurred, 50, 150), iters, warmup),
-        "findContours": timed(
-            lambda: cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE),
-            iters,
-            warmup,
-        ),
-        "dilate": timed(lambda: cv2.dilate(edges, None, iterations=1), iters, warmup),
     }
     return {k: round(v * 1e3, 4) for k, v in timed_ops.items()}  # ms per call
 
 
 def full_pipeline(img, iters: int, warmup: int) -> float:
-    """End-to-end ForgeSight path: the workload judges will actually run."""
+    """End-to-end ForgeSight path: mirrors backend/app/vision.py exactly.
+
+    Must stay in sync with the application or the benchmark measures something
+    the judges never run.
+    """
 
     def once():
         small = cv2.resize(img, (640, 480))
         gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
         b = cv2.GaussianBlur(gray, (5, 5), 0)
         e = cv2.Canny(b, 50, 150)
-        th = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 9
-        )
-        th = cv2.morphologyEx(th, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+        bg = cv2.blur(gray, (25, 25))
+        tophat = cv2.subtract(bg, gray)
+        _, mask = cv2.threshold(tophat, 18, 255, cv2.THRESH_BINARY)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
         cv2.findContours(e, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     for _ in range(warmup):
         once()

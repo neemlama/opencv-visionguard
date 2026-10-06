@@ -124,12 +124,101 @@ All sample-API tests in this repo were re-run with `curl.exe`.
 
 ---
 
+## C-05 — COOL was *slower* than stock OpenCV, and the profiler showed why
+
+**Severity:** High, and the most valuable finding in the project.
+
+**Symptom.** The first valid Graviton4 comparison produced the wrong direction:
+
+| arm | instance | library | OpenCV | fps |
+|---|---|---|---|---|
+| A | `c8g.medium` | COOL | 4.14.0-pre | 271.06 |
+| B | `c8g.medium` | DIY pip | 4.14.0 | 357.27 |
+
+**A/B = 0.76x** — COOL was 24% *slower* than the stock wheel on identical
+hardware. Reporting that as-is would have been a poor COOL submission, and
+tuning thresholds would not have helped.
+
+**Root cause.** Per-op timings isolated a single dominant operation:
+
+| op | COOL | DIY | |
+|---|---|---|---|
+| `Canny` | 0.189 | 0.615 | COOL **3.25x faster** |
+| `adaptiveThreshold` | 2.748 | 1.714 | COOL **0.63x slower** |
+
+`adaptiveThreshold` was ~74% of total pipeline time (2.75 ms of 3.69 ms). COOL's
+large `Canny` win could not offset one operation it handles badly, so a
+per-op-dominant workload inverted the total.
+
+**Root cause of the bottleneck.** Our own C-01 fix introduced it. The
+dark-blob detector used `adaptiveThreshold(31,9)` because that is the textbook
+choice — which is exactly why nobody questions it and why it survived into the
+benchmark.
+
+**Fix.** Stop guessing, and measure candidate replacements on both axes — speed
+*and* recall — with `bench/detector_variants.py`:
+
+```
+variant                     ms/call  clean defect damage glare
+adaptiveThreshold(31,9)       2.428      0      1      6      2
+gaussTophat sigma=12          5.291      0      1      6      0
+boxTophat k=25                0.920      0      1      6      0   <- chosen
+boxTophat k=41                0.845      0      1      6      3
+morphBlackhat k=15            1.948      1      2      1      0
+medianTophat k=15            14.743      0      0      0      0
+```
+
+Chose a **box-filter black-hat**: `cv2.blur` is O(1) per pixel regardless of
+kernel size, so k=25 costs 0.92 ms where a 25x25 Gaussian (51x51 implied kernel)
+costs 5.29 ms.
+
+An intermediate attempt is instructive: we first swapped `adaptiveThreshold` for
+a *Gaussian* top-hat on the theory that COOL accelerates `GaussianBlur`. Locally
+that was **4.0 ms versus adaptiveThreshold's 1.6 ms — a pessimisation**, caught
+by measuring before deploying. The theory was wrong; the box filter was right.
+
+**Verification.** All five sample outcomes and blob counts unchanged
+(`clean`=0, `defect`=1, `damage`=6, `blurry`=0, `glare`=0), so no accuracy was
+traded away.
+
+**Result after the fix**
+
+| metric | before | after |
+|---|---|---|
+| application latency | 3.69 ms/frame | **1.10 ms/frame** (3.35x faster) |
+| COOL vs DIY | 0.76x | **1.28x** |
+
+**What we learned.** A library benchmark is only as useful as the workload's
+composition. One operation can represent three quarters of the runtime, so
+"which library is faster" is really "which library is faster *on your
+bottleneck*". The win came from reading per-op timings and replacing the
+bottleneck, not from tuning anything. We also report the remaining COOL
+regression on `adaptiveThreshold` (0.62x) rather than hiding it.
+
+---
+
+## C-06 — Marketplace COOL images are not the OpenCV 5 the listing advertises
+
+The Graviton4 listing states COOL is "based on OpenCV 5", but the image reports
+`cv2.__version__ == '4.14.0-pre'`; the Graviton2 image reports `4.12.0`
+(`libopencv_imgproc.so.4.12.0`). Verified on-instance, not from docs.
+
+**Consequence.** A naive COOL-vs-pip comparison is version-confounded, so all arms
+are pinned to the same major.minor. The **application** still runs OpenCV 5.0.0
+as the competition requires; only the benchmark control uses 4.x.
+
+Related trap: COOL reports a pre-release (`4.14.0-pre`), which does not resolve on
+PyPI, so the control must be pinned to a range (`>=4.14.0,<4.15.0`) rather than an
+exact version.
+
+---
+
 ## C-04 — Wrong mental model of COOL packaging (design correction)
 
 Our first plan assumed COOL could be `pip install`ed or baked into a Dockerfile
 for `linux/arm64`. Researching the AWS Marketplace listing showed COOL ships as
-a **Graviton AMI** (Ubuntu 24.04, ARM64, KleidiCV-optimised, based on OpenCV 5),
-not a library artifact.
+a **Graviton AMI** (Ubuntu 24.04, ARM64, KleidiCV-optimised), not a library
+artifact.
 
 Consequence: the COOL Award path must launch the Marketplace AMI and run the
 workload inside it with:

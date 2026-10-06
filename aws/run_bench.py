@@ -23,6 +23,7 @@ terminated in a finally block.
 """
 import argparse
 import json
+import re
 import statistics
 import sys
 import time
@@ -56,15 +57,36 @@ COOL_ENV = (
 )
 
 
+VER_RE = re.compile(r"(\d+)\.(\d+)")
+
+
+def pin_for_cool_version(cool_version):
+    """Map a COOL-reported version to a pip range that actually resolves.
+
+    COOL images report pre-release builds (e.g. "4.14.0-pre") which do not exist
+    on PyPI, so pinning the exact string makes the DIY control fail to install.
+    Instead install the newest stable release of the same major.minor, which is
+    the closest fair control.
+    """
+    m = VER_RE.search(cool_version or "")
+    if not m:
+        return ""
+    major, minor = int(m.group(1)), int(m.group(2))
+    return f">={major}.{minor}.0,<{major}.{minor + 1}.0"
+
+
 def diy_install_cmd(opencv_version=""):
     """DIY control install.
 
     `opencv_version` pins the pip wheel so the A-vs-B delta is attributable to
-    COOL alone. The COOL Graviton2 AMI ships OpenCV 4.12, so comparing it against
-    an unpinned (5.x) DIY build would confound the optimisation with a major
-    version change.
+    COOL alone. The COOL AMIs bundle different majors (Graviton2 ships 4.12,
+    Graviton4 ships 4.14.0-pre), and comparing across majors would confound the
+    optimisation with a version change. Accepts a range like ">=4.14.0,<4.15.0".
     """
-    spec = f"opencv-python=={opencv_version}" if opencv_version else "opencv-python"
+    spec = f"opencv-python{opencv_version}" if opencv_version else "opencv-python"
+    # Single-quote the spec: an unquoted "opencv-python>=4.14.0,<4.15.0" makes
+    # bash treat ">" as output redirection, so pip never runs and cv2 is missing.
+    spec_q = "'" + spec + "'"
     return (
         "export DEBIAN_FRONTEND=noninteractive; "
         # Subshell-scoped redirect: a bare `exec >` keeps redirecting for the
@@ -73,7 +95,7 @@ def diy_install_cmd(opencv_version=""):
         "  apt-get install -y -qq python3-venv python3-pip libgl1 libglib2.0-0t64 && "
         "  python3 -m venv /opt/benchenv && "
         "  /opt/benchenv/bin/pip install -q --upgrade pip && "
-        f"  /opt/benchenv/bin/pip install -q {spec} numpy "
+        f"  /opt/benchenv/bin/pip install -q {spec_q} numpy "
         ") > /tmp/install.log 2>&1 || { echo INSTALL_FAILED; tail -20 /tmp/install.log; }; "
         "/opt/benchenv/bin/python -c \"import cv2; print('opencv', cv2.__version__)\""
     )
@@ -82,6 +104,37 @@ def diy_install_cmd(opencv_version=""):
 # them `import cv2` dies with "libGL.so.1: cannot open shared object file".
 # The full opencv-python (not -headless) is installed deliberately so the control
 # matches AWS's own published DIY baseline.
+
+
+# us-east-1 on-demand list prices, used only for the pre-run estimate.
+USD_PER_HOUR = {
+    "c8g.medium": 0.072, "c8g.large": 0.144, "c8g.xlarge": 0.288,
+    "m8g.medium": 0.077, "m8g.large": 0.154,
+    "r8g.medium": 0.084, "r8g.large": 0.168,
+    "c6g.medium": 0.036, "c6g.large": 0.072,
+    "c6i.large": 0.085, "c6i.medium": 0.0425,
+    "t4g.small": 0.0168, "t3.small": 0.0208,
+}
+# Typical wall-clock per arm: boot + SSM + (DIY only) pip install of OpenCV.
+MINUTES_PER_ARM = {"cool": 4, "diy": 8}
+
+
+def estimate_cost(arms, detected_version=""):
+    """Rough pre-run cost so the operator can see spend BEFORE committing.
+
+    The COOL Marketplace product also bills a licence fee per running hour that
+    is not modelled here, so treat this as a lower bound.
+    """
+    total = 0.0
+    print("\n=== cost estimate (us-east-1 on-demand, lower bound) ===")
+    for a in arms:
+        rate = USD_PER_HOUR.get(a["instance_type"], 0.05)
+        mins = MINUTES_PER_ARM["cool" if a["cool"] else "diy"]
+        cost = rate * mins / 60
+        total += cost
+        print(f"  arm {a['name']:<2} {a['instance_type']:<12} ~{mins} min  ~${cost:.4f}")
+    print(f"  total ~${total:.4f}  (+ COOL licence fee on COOL arms)")
+    return total
 
 
 def parse_arm(spec):
@@ -402,6 +455,15 @@ def main():
 
     arms = [parse_arm(s) for s in args.arm]
     region = args.region
+
+    # COOL arms run first so the DIY control can be pinned to the *same* OpenCV
+    # version automatically. The COOL AMIs bundle different majors (Graviton2
+    # ships 4.12), and comparing across majors would confound the optimisation
+    # with a version change.
+    arms.sort(key=lambda a: not a["cool"])
+
+    estimate_cost(arms, args.opencv_version)
+
     iam = boto3.client("iam", region_name=region)
     ec2 = boto3.client("ec2", region_name=region)
 
@@ -417,18 +479,20 @@ def main():
     print(f"[net] candidate AZs: {', '.join(c['az'] for c in candidates)}")
 
     results = []
+    pinned = args.opencv_version
     for arm in arms:
-        results.append(
-            run_arm(
-                region,
-                arm,
-                profile_arn,
-                candidates,
-                args.usd_per_hour,
-                args.volume_size,
-                args.opencv_version,
-            )
+        res = run_arm(
+            region, arm, profile_arn, candidates, args.usd_per_hour,
+            args.volume_size, pinned,
         )
+        results.append(res)
+        if res and arm["cool"] and not pinned:
+            # Match the control to COOL's bundled major.minor from now on.
+            v = pin_for_cool_version(res["opencv_version"])
+            pinned = v
+            print(f"[{arm['name']}] COOL bundles OpenCV {res['opencv_version']}; "
+                  f"pinning DIY control to opencv-python{v}")
+
     results = [r for r in results if r]
 
     if not results:
