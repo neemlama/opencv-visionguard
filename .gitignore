@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+bench_result*.json
+*.mp4
+node_modules/
