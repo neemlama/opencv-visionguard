@@ -4,5 +4,7 @@ __pycache__/
 venv/
 .env
 bench_result*.json
+bench_local*.json
+bench/results/*.json
 *.mp4
 node_modules/
