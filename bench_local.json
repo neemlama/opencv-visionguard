@@ -1,0 +1,25 @@
+{
+  "label": "local-dev-arm",
+  "build": "DIY",
+  "build_marker": "/opt/cool absent",
+  "opencv_version": "5.0.0",
+  "pythonpath": "",
+  "arch": "AMD64",
+  "cpu": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+  "instance_type": "none",
+  "images": 5,
+  "iters": 8,
+  "warmup_discarded": 2,
+  "per_op_ms": {
+    "resize": 0.0581,
+    "GaussianBlur": 0.0732,
+    "adaptiveThreshold": 2.5963,
+    "Canny": 0.68,
+    "findContours": 0.083,
+    "dilate": 0.0591
+  },
+  "mean_frame_seconds": 0.004655,
+  "fps": 214.84,
+  "usd_per_hour": 0.0,
+  "usd_per_1000_frames": null
+}
