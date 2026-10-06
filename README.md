@@ -26,41 +26,65 @@ and sometimes acts on the world and looks again.
    named fix, second-opinion re-analysis, escalate to a stop-the-line work order,
    queue human review, or pass.
 
-## Measured results (public data, held-out split)
+## Measured results (public data, leakage-free split)
+
+**1800 unique source images** — NEU-CLS and NEU-DET turned out to be the *same*
+survey, so both are deduplicated and the split is grouped by source image
+(verified zero group overlap). See `docs/EVALUATION.md` §1a.
 
 | metric | value |
 |---|---|
-| defect classification, 7 classes | **93.80% accuracy**, macro F1 0.929 |
-| accuracy on the capture set used at inference | **95.40%** |
-| confidence calibration (ECE) | **0.0218** (was 0.0750 before temperature scaling) |
-| defect sensitivity at the shipped operating point | **1.0000** — 0 of 1080 defects missed |
-| auto-escalation rate | 42.8% of defects closed without human re-inspection |
-| clean captures released automatically | 48.1% |
-| COOL vs stock OpenCV, production pipeline | **0.97x — parity** (see below) |
-| COOL vs stock OpenCV, earlier Canny-heavy pipeline | **1.27x** |
+| defect classification, 7 classes | **92.75%** accuracy, macro F1 0.927 |
+| accuracy on the capture set used at inference | **94.81%** |
+| **missed defects** (test split) | **0 of 540** |
+| **auto-pass precision** | **1.000** — nothing auto-passed was defective |
+| auto-escalate rate | 38.0% of defects closed without a human |
+| clean captures released automatically | 54.3% |
+| confidence calibration, ECE on test | **0.0338** (temperature fitted on validation) |
+| throughput after the feature study | **2.20x faster** than the 16-filter bank, −0.33 accuracy pts |
+| COOL vs stock OpenCV, library-only | **0.93x — COOL slower** |
+| COOL (Graviton) vs stock OpenCV (x86) | 1.11x — but that is the *hardware* |
+| cost per 1000 frames | Graviton $0.000067 vs x86 $0.000043 — **x86 is cheaper** |
 
-Trained and evaluated on **NEU-CLS + NEU-DET** (3600 real photographs, 6 defect
-classes) plus a `no_defect` class built from annotated-background crops. No
-synthetic data is used anywhere in the evaluation.
+Two methodology leaks were found and fixed before any of these numbers were
+quoted: the dataset duplication above, and a temperature that had been fitted on
+the same split used to report ECE. Both are documented rather than quietly
+corrected.
 
 ## The COOL finding, stated plainly
 
-On our production pipeline COOL is **not** faster (0.97x). One op —
-`gabor_filter2D_x16` — is 82% of runtime and COOL leaves it at exactly 1.00x.
-COOL does accelerate `Canny` (1.49x), `resize` (1.33x) and `cvtColor` (1.23x), but
-those are under 6% of our workload.
+**COOL is not faster than stock OpenCV on our workload (0.93x), and it is not
+cheaper either.** The operation that dominates our pipeline is a Gabor
+`filter2D`, and COOL leaves it at 1.00x. COOL does accelerate `Canny` (1.57x) and
+`cvtColor` (1.24x), but those are not in our hot path.
 
-On the earlier Canny-dominated pipeline the same hardware and libraries gave
-**1.27x**.
+Two claims we tested rather than assumed, and which did **not** hold:
 
-We report both. We did not rewrite the feature bank to make COOL look good — that
-would be benchmark-fitting. Full per-op tables in `docs/BENCHMARK-RESULTS.md`.
+- *"Graviton is cheaper per frame."* It is not, at these instance sizes.
+  `t3.medium` costs $0.000043 per 1000 frames vs `c8g.medium` at $0.000067,
+  because Graviton's hourly rate is ~42% higher at this size. COOL's licence fee
+  is additional and excluded from that figure.
+- *"COOL-accelerated ops dominate a vision pipeline."* They dominate the earlier
+  Canny-heavy pipeline (1.27x), not this one.
+
+The one favourable comparison is COOL-on-Graviton vs stock-on-x86 at **1.11x** —
+but the DIY-on-Graviton arm is 1.19x, so that gap is the **hardware**, not COOL.
+
+We did not rewrite the feature bank to flatter COOL. When a cheaper bank turned
+out to be equally accurate we shipped it *because it is better product*, and
+published the trade-off. Full tables in `docs/BENCHMARK-RESULTS.md`.
+
+**Open question we have asked the organiser:** our COOL image is a `-v2-` build
+bundling OpenCV **4.14**, while the Marketplace listing describes v3.1 as built on
+OpenCV **5.0**. Until that is resolved we are treating the main podium and the
+Agentic Vision Award as the realistic targets and COOL as a possible bonus. Draft
+email: `docs/EMAIL-opencv-org.md`.
 
 ## Structure
 
 | path | purpose |
 |---|---|
-| `backend/app/features.py` | OpenCV 5 descriptor: 16 Gabor, Sobel, blur/anomaly, Laplacian |
+| `backend/app/features.py` | OpenCV 5 descriptor: 8 Gabor, Sobel, blur/anomaly, Laplacian |
 | `backend/app/classifier.py` | NumPy logistic regression + temperature scaling |
 | `backend/app/analysis.py` | perception: quality gate, classification, localisation |
 | `backend/app/agent.py` | decision loop, confidence bands, bounded retries |

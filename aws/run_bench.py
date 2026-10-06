@@ -139,16 +139,27 @@ def estimate_cost(arms, detected_version=""):
 
 
 def parse_arm(spec):
-    """ARM=AMI:TYPE[:cool] -> dict. Tolerant of the "cool" suffix being absent."""
+    """ARM=AMI:INSTANCE_TYPE[:cool][@usd_per_hour]
+
+    The optional @rate exists because arms run on different instance families:
+    comparing COOL-on-Graviton against DIY-on-x86 is meaningless for COST unless
+    each arm is priced at its own on-demand rate. Tolerance for the "cool"
+    segment being absent.
+    """
+    rate = 0.0
+    if "@" in spec:
+        spec, _, r = spec.partition("@")
+        rate = float(r)
     name, _, rest = spec.partition("=")
     if not rest:
-        raise SystemExit(f"bad --arm '{spec}', expected ARM=AMI:INSTANCE_TYPE[:cool]")
+        raise SystemExit(f"bad --arm '{spec}', expected ARM=AMI:INSTANCE_TYPE[:cool][@rate]")
     parts = rest.split(":")
     if len(parts) < 2:
-        raise SystemExit(f"bad --arm '{spec}', expected ARM=AMI:INSTANCE_TYPE[:cool]")
+        raise SystemExit(f"bad --arm '{spec}', expected ARM=AMI:INSTANCE_TYPE[:cool][@rate]")
     ami, itype = parts[0], parts[1]
     use_cool = any(p.lower() == "cool" for p in parts[2:])
-    return {"name": name.strip(), "ami": ami, "instance_type": itype, "cool": use_cool}
+    return {"name": name.strip(), "ami": ami, "instance_type": itype,
+            "cool": use_cool, "usd_per_hour": rate}
 
 
 def subnet_candidates(ec2):
@@ -513,7 +524,8 @@ def main():
     pinned = args.opencv_version
     for arm in arms:
         res = run_arm(
-            region, arm, profile_arn, candidates, args.usd_per_hour,
+            region, arm, profile_arn, candidates,
+            arm.get("usd_per_hour", 0.0) or usd_per_hour,
             args.volume_size, pinned,
         )
         results.append(res)

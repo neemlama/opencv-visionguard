@@ -191,6 +191,26 @@ def run_loop(image=None, max_steps=MAX_STEPS, simulator=None, scene=None, preset
             continue
 
         if d["final"] == "re-capture" and d["requested_fixes"]:
+            if sim is None:
+                # No capture simulator (the plain HTTP path): we cannot re-render,
+                # and inventing a pixel-level "fix" would fake the loop. Record the
+                # recapture request and hand the decision back to the operator.
+                wid = f"WO-{uuid.uuid4().hex[:6]}"
+                _step(trace,
+                      f"iter {i}: capture unusable "
+                      f"(sharpness={a['quality']['sharpness']})",
+                      "recapture required, but no capture device is attached",
+                      f"operator must recapture with {d['requested_fixes']}; "
+                      f"queued for human review (workorder {wid})",
+                      {"requested_fixes": d["requested_fixes"],
+                       "simulated": False, "iteration": i})
+                return {"final": "re-capture", "workorder_id": wid,
+                        "human_required": True, "trace": trace,
+                        "iterations": i + 1, "history": history, "region": None,
+                        "requested_fixes": d["requested_fixes"],
+                        "reason": "no_capture_device_attached",
+                        "final_settings": None}
+
             fresh = [f for f in d["requested_fixes"] if f not in applied_fixes]
             if not fresh:
                 # Every available fix has been applied and the capture is still
@@ -207,27 +227,17 @@ def run_loop(image=None, max_steps=MAX_STEPS, simulator=None, scene=None, preset
                         "human_required": True, "trace": trace,
                         "iterations": i + 1, "history": history, "region": None,
                         "reason": "capture_quality_unresolvable",
-                        "final_settings": dict(sim.settings) if sim is not None else None}
+                        "final_settings": dict(sim.settings)}
             fix = fresh[0]
             applied_fixes.append(fix)
-            if sim is not None:
-                before = dict(sim.settings)
-                current = sim.apply(fix)
-                _step(trace,
-                      f"iter {i}: applied '{fix}' -> "
-                      f"{ {k: before[k] for k in before} } -> {sim.settings}",
-                      "capture settings corrected, scene re-rendered",
-                      "run perception again on the recaptured frame",
-                      {"fix": fix, "settings_before": before,
-                       "settings_after": dict(sim.settings), "iteration": i})
-            else:
-                from .capture import apply_fix
-                current = apply_fix(current, fix)
-                _step(trace,
-                      f"iter {i}: applied fix '{fix}' -> new capture",
-                      "re-analyse the recaptured frame",
-                      "run perception again on the corrected image",
-                      {"fix": fix, "iteration": i})
+            before = dict(sim.settings)
+            current = sim.apply(fix)
+            _step(trace,
+                  f"iter {i}: applied '{fix}' -> {before} -> {sim.settings}",
+                  "capture settings corrected, scene re-rendered",
+                  "run perception again on the recaptured frame",
+                  {"fix": fix, "settings_before": before,
+                   "settings_after": dict(sim.settings), "iteration": i})
             history.append({"iteration": i, "action": "recapture", "fix": fix,
                             "analysis": a, "decision": d["final"]})
             continue

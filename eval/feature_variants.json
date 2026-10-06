@@ -1,0 +1,41 @@
+{
+  "note": "all variants trained and tested on the same leakage-free split",
+  "variants": [
+    {
+      "variant": "gabor16 (production)",
+      "gabor_filters": 16,
+      "descriptor_len": 69,
+      "ms_per_frame": 12.589,
+      "fps": 79.4,
+      "accuracy": 0.9537,
+      "temperature": 0.55
+    },
+    {
+      "variant": "gabor8",
+      "gabor_filters": 8,
+      "descriptor_len": 53,
+      "ms_per_frame": 5.723,
+      "fps": 174.7,
+      "accuracy": 0.9537,
+      "temperature": 0.55
+    },
+    {
+      "variant": "gabor4",
+      "gabor_filters": 2,
+      "descriptor_len": 41,
+      "ms_per_frame": 6.518,
+      "fps": 153.4,
+      "accuracy": 0.9389,
+      "temperature": 0.55
+    },
+    {
+      "variant": "gabor0 (gradients only)",
+      "gabor_filters": 0,
+      "descriptor_len": 37,
+      "ms_per_frame": 5.841,
+      "fps": 171.2,
+      "accuracy": 0.9019,
+      "temperature": 0.6
+    }
+  ]
+}

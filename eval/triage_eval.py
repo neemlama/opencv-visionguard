@@ -1,19 +1,17 @@
-"""Calibrate the agent's confidence thresholds on the held-out NEU split.
+"""Calibrate the agent's thresholds on the leakage-free held-out test split.
 
-Picking PASS_MIN / REVIEW_MIN / ESCALATE_MIN by feel produces an agent that
-sends everything to a human, which is safe but useless - and it hides the real
-trade-off. This measures the trade-off instead.
+Uses eval/splits.py (deduplicated, group-aware split) rather than the earlier
+per-row split, so these numbers are defensible.
 
-For each candidate ESCALATE_MIN it reports the operating point:
+A system that sends everything to a human also misses zero defects, so
+sensitivity alone is meaningless. Reported together, as they must be:
 
-    defect_sensitivity  fraction of real defects NOT silently passed
-    auto_escalate       fraction of defects closed without a human re-inspect
-    clean_pass_rate     fraction of clean captures released automatically
-    human_review_rate   share of traffic that needs a person
-
-Industrial inspection is asymmetric: missing a defect is far worse than an extra
-review, so the chosen operating point maximises auto-escalation subject to zero
-missed defects on the held-out set.
+  defect_sensitivity     fraction of real defects NOT silently passed
+  auto_pass_precision    of images auto-passed, fraction genuinely clean
+                         <-- this is what a false accept costs in production
+  auto_escalate_rate     defects closed without human re-inspection
+  human_review_rate      share of traffic needing a person
+  second_opinion_rate    low-confidence cases sent for a second perception
 
     python eval/triage_eval.py
 """
@@ -22,81 +20,54 @@ import json
 import sys
 from pathlib import Path
 
-import cv2
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from backend.app.classifier import DefectClassifier  # noqa: E402
-from backend.app.features import describe, to_gray  # noqa: E402
-from eval.train_classifier import (CLS_DIR, DET_ROOT, DET_PREFIXES,  # noqa: E402
-                                   PREFIXES, stratified_split)
+from backend.app.classifier import DefectClassifier, expected_calibration_error  # noqa: E402
+from eval.splits import build, grouped_split  # noqa: E402
 
 CLEAN = "no_defect"
+SEVERE = ("inclusion", "rolled-in_scale", "pitted_surface")
 
 
-def load_holdout(model):
-    """Rebuild the same stratified split used for training, then extract features."""
-    paths = []
-    for ci, p in enumerate(PREFIXES):
-        paths += [(p_, ci) for p_ in sorted(CLS_DIR.glob(f"{p}_*.bmp"))]
-    for ci, p in enumerate(DET_PREFIXES):
-        paths += [(p_, ci) for p_ in sorted((DET_ROOT / "IMAGES").glob(f"{p}_*.jpg"))]
-    # Background samples are cheap to regenerate but needed for the clean class.
-    from eval.train_classifier import background_samples, N_DEFECT_CLASSES
-    X, y = [], []
-    for p, ci in paths:
-        img = cv2.imread(str(p), cv2.IMREAD_GRAYSCALE)
-        if img is None:
-            continue
-        X.append(describe(to_gray(img)))
-        y.append(ci)
-    bg = background_samples(per_image=2)
-    if len(bg):
-        X.extend(list(bg))
-        y.extend([N_DEFECT_CLASSES] * len(bg))
-    X = np.asarray(X, dtype=np.float64)
-    y = np.asarray(y)
-
-    tr, te = stratified_split(y, 0.3, seed=0)
-    probs = model.predict_proba(X[te])
-    return y[te], probs
-
-
-def operating_point(y, probs, pass_min, review_min, escalate_min, severe):
+def operating_point(y, probs, names, pass_min, review_min, escalate_min):
     n_classes = probs.shape[1]
-    is_defect = y != n_classes - 1
+    clean_idx = n_classes - 1
+    is_defect = y != clean_idx
     top = probs.max(axis=1)
     pred = probs.argmax(axis=1)
+    severe_idx = [names.index(s) for s in SEVERE if s in names]
 
-    # Agent logic mirrored from backend/app/agent.decide(). A real defect counts
-    # as MISSED only when the classifier actively calls it clean at high
-    # confidence. Low-confidence predictions do not silently pass: the agent
-    # returns needs-second-opinion, then human review, so they are review traffic,
-    # not misses. Counting them as misses (as a first draft here did) overstated
-    # the danger enormously - 46 "misses" that were never actually passed.
-    escalate = is_defect & (top >= escalate_min) & np.isin(pred, severe)
+    # Mirrors backend/app/agent.py decide()
+    escalate = is_defect & (top >= escalate_min) & np.isin(pred, severe_idx)
     review = is_defect & ~escalate & (top >= review_min)
-    second_opinion = is_defect & ~escalate & ~review
-    missed = is_defect & (pred == n_classes - 1) & (top >= pass_min)
-    clean = ~is_defect
-    clean_pass = clean & (pred == n_classes - 1) & (top >= pass_min)
-    clean_to_review = clean & ~clean_pass
+    second = is_defect & ~escalate & ~review
+    # A defect is MISSED only when the classifier actively calls it clean with
+    # confidence. Low-confidence predictions route to second opinion then review,
+    # so they are review traffic, not misses.
+    missed = is_defect & (pred == clean_idx) & (top >= pass_min)
 
-    n_def = max(1, is_defect.sum())
-    n_clean = max(1, clean.sum())
+    auto_pass = (~is_defect) & (pred == clean_idx) & (top >= pass_min)
+    auto_pass_true_clean = auto_pass & (~is_defect)
+    clean_reviewed = (~is_defect) & ~auto_pass
+
+    n_def = max(1, int(is_defect.sum()))
+    n_clean = max(1, int((~is_defect).sum()))
     return {
-        "escalate_min": escalate_min,
-        "pass_min": pass_min,
-        "review_min": review_min,
-        "auto_escalate_rate": round(float(escalate.sum() / n_def), 4),
-        "human_review_rate": round(float(review.sum() / len(y)), 4),
-        "second_opinion_rate": round(float(second_opinion.sum() / len(y)), 4),
-        "clean_pass_rate": round(float(clean_pass.sum() / n_clean), 4),
-        "clean_to_review_rate": round(float(clean_to_review.sum() / n_clean), 4),
-        "missed_defects": int(missed.sum()),
+        "escalate_min": escalate_min, "review_min": review_min, "pass_min": pass_min,
         "defect_sensitivity": round(1 - float(missed.sum()) / n_def, 4),
+        "missed_defects": int(missed.sum()),
+        "auto_escalate_rate": round(float(escalate.sum()) / n_def, 4),
+        "human_review_rate": round(float(review.sum()) / len(y), 4),
+        "second_opinion_rate": round(float(second.sum()) / len(y), 4),
+        "auto_pass_rate": round(float(auto_pass.sum()) / len(y), 4),
+        "auto_pass_precision": round(float(auto_pass_true_clean.sum())
+                                     / max(1, int(auto_pass.sum())), 4),
+        "auto_passed_n": int(auto_pass.sum()),
+        "clean_reviewed_rate": round(float(clean_reviewed.sum()) / n_clean, 4),
+        "false_accepts": int(auto_pass.sum()) - int(auto_pass_true_clean.sum()),
     }
 
 
@@ -107,57 +78,67 @@ def main():
 
     model = DefectClassifier.load()
     names = list(model.class_names)
-    severe = ["inclusion", "rolled-in_scale", "pitted_surface"]
-    severe_idx = [names.index(s) for s in severe if s in names]
 
-    y, probs = load_holdout(model)
-    print(f"held-out n={len(y)}  classes={names}")
-    print(f"defects={int((y != len(names) - 1).sum())}  clean={int((y == len(names) - 1).sum())}\n")
+    X, y, groups, src, n_unique = build(with_background=True)
+    tr, va, te = grouped_split(y, groups)
+    probs = model.predict_proba(X[te])
+    y_te = y[te]
+
+    n_def = int((y_te != len(names) - 1).sum())
+    n_clean = int((y_te == len(names) - 1).sum())
+    print(f"leakage-free test split: n={len(y_te)}  "
+          f"({n_def} defect, {n_clean} clean)  unique source images={n_unique}")
+    print(f"model T={model.temperature:.2f}  "
+          f"test ECE={expected_calibration_error(probs, y_te):.4f}\n")
 
     rows = []
-    for escalate_min in (0.50, 0.60, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95):
-        r = operating_point(y, probs, pass_min=0.80, review_min=0.55,
-                            escalate_min=escalate_min, severe=severe_idx)
+    print(f"{'escalate_min':>13} {'sens':>7} {'missed':>7} {'auto-esc':>9} "
+          f"{'review':>8} {'2nd-op':>8} {'auto-pass':>10} {'pass-P':>8} {'clean-rev':>10}")
+    for em in (0.50, 0.60, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95):
+        r = operating_point(y_te, probs, names, 0.80, 0.55, em)
         rows.append(r)
-        print(f"  escalate>={escalate_min:.2f}  auto-escalate={r['auto_escalate_rate'] * 100:5.1f}%  "
-              f"review={r['human_review_rate'] * 100:5.1f}%  "
-              f"clean-pass={r['clean_pass_rate'] * 100:5.1f}%  "
-              f"missed={r['missed_defects']:>3}  sens={r['defect_sensitivity']:.4f}")
+        print(f"{em:>13.2f} {r['defect_sensitivity']:>7.4f} {r['missed_defects']:>7} "
+              f"{r['auto_escalate_rate'] * 100:>8.1f}% {r['human_review_rate'] * 100:>7.1f}% "
+              f"{r['second_opinion_rate'] * 100:>7.1f}% {r['auto_pass_rate'] * 100:>9.1f}% "
+              f"{r['auto_pass_precision']:>8.3f} {r['clean_reviewed_rate'] * 100:>9.1f}%")
 
-    # Choose the most automated operating point that misses nothing held out.
     safe = [r for r in rows if r["missed_defects"] == 0]
-    chosen = max(safe, key=lambda r: r["auto_escalate_rate"]) if safe else max(
-        rows, key=lambda r: r["defect_sensitivity"])
-    print(f"\nchosen: escalate_min={chosen['escalate_min']} "
-          f"(auto-escalate {chosen['auto_escalate_rate'] * 100:.1f}%, "
-          f"{chosen['missed_defects']} missed defects)")
-    if not safe:
-        print("WARNING: no threshold missed zero defects on the held-out split. "
-              "A real deployment would still route everything to review.")
+    if safe:
+        chosen = max(safe, key=lambda r: r["auto_escalate_rate"])
+        print(f"\nchosen: escalate_min={chosen['escalate_min']} "
+              f"(auto-escalate {chosen['auto_escalate_rate'] * 100:.1f}%, "
+              f"0 missed defects)")
+    else:
+        best = max(rows, key=lambda r: (r["defect_sensitivity"], r["auto_escalate_rate"]))
+        chosen = best
+        print(f"\nWARNING: no threshold reaches zero missed defects. "
+              f"Best available: escalate_min={chosen['escalate_min']} "
+              f"with {chosen['missed_defects']} missed. A real deployment would "
+              f"still require human sign-off.")
 
-    # Confidence reliability: is a stated 0.9 actually right 90% of the time?
-    print("\nconfidence reliability (predicted vs observed accuracy):")
-    bins = [(0.0, 0.5), (0.5, 0.7), (0.7, 0.85), (0.85, 0.95), (0.95, 1.01)]
+    print(f"\nAt the shipped setting ESCALATE_MIN=0.85:")
+    ship = [r for r in rows if r["escalate_min"] == 0.85][0]
+    for k in ("defect_sensitivity", "missed_defects", "auto_escalate_rate",
+              "human_review_rate", "second_opinion_rate", "auto_pass_rate",
+              "auto_pass_precision", "clean_reviewed_rate"):
+        print(f"  {k:<24}{ship[k]}")
+
     top = probs.max(axis=1)
-    correct = (probs.argmax(axis=1) == y)
-    rel = {}
-    for lo, hi in bins:
+    print(f"\nconfidence reliability on TEST:")
+    for lo, hi in ((0, .5), (.5, .7), (.7, .85), (.85, .95), (.95, 1.01)):
         m = (top >= lo) & (top < hi)
         if m.sum():
-            rel[f"{lo:.2f}-{hi:.2f}"] = {
-                "n": int(m.sum()),
-                "stated_mean_confidence": round(float(top[m].mean()), 3),
-                "observed_accuracy": round(float(correct[m].mean()), 3),
-            }
             print(f"  {lo:.2f}-{hi:.2f}  n={int(m.sum()):>4}  "
-                  f"stated {top[m].mean():.3f}  actual {correct[m].mean():.3f}")
-    ece = sum(v["n"] / len(y) * abs(v["stated_mean_confidence"] - v["observed_accuracy"])
-              for v in rel.values())
-    print(f"  expected calibration error: {ece:.4f}")
+                  f"stated {top[m].mean():.3f}  actual {(probs[m].argmax(1) == y_te[m]).mean():.3f}")
 
     Path(args.out).write_text(json.dumps({
-        "sweep": rows, "chosen": chosen, "reliability": rel, "ece": round(ece, 4),
-        "severe_classes": severe,
+        "split": "leakage-free, group-aware, deduplicated",
+        "unique_source_images": int(n_unique),
+        "test_n": int(len(y_te)), "test_defects": n_def, "test_clean": n_clean,
+        "model_temperature": round(model.temperature, 4),
+        "test_ece": round(expected_calibration_error(probs, y_te), 4),
+        "sweep": rows, "chosen": chosen, "shipped_0.85": ship,
+        "severe_classes": list(SEVERE),
     }, indent=2))
     print(f"\nwrote {args.out}")
 

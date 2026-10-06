@@ -24,8 +24,8 @@ Three questions that fail differently:
 
 | evaluation | question | headline |
 |---|---|---|
-| **classification** | which defect is this? | **93.80%** held-out accuracy, macro F1 0.929 |
-| **triage** | should a person look at it? | **sensitivity 1.0000**, 0 of 1080 defects missed |
+| **classification** | which defect is this? | **92.75%** held-out accuracy, macro F1 0.927 |
+| **triage** | should a person look at it? | **0 missed defects**, auto-pass precision **1.000** |
 | **localisation** | where is it? | **macro F1 ~0.19** at IoU 0.5 — weak, stated plainly |
 
 Localisation is reported separately precisely because it is the weakest part.
@@ -33,92 +33,149 @@ Pooling it with classification would hide that.
 
 ---
 
-## 2. Classification — 7 classes
+## 1a. Two leaks found and fixed before quoting any number
 
-Training set 3869 images: 1800 NEU-CLS + 1800 NEU-DET + 269 `no_defect`
-crops taken from regions **outside** every annotation box (NEU contains only
-defective images, so a triage system needs a clean class to be able to output
-"pass"). Stratified 70/30 split, seed 0.
+Both were found by review, not by the tooling, and both inflated our result.
 
-| | held-out accuracy |
+### Leak 1 — NEU-CLS and NEU-DET are the same photographs
+
+We trained on "CLS + DET" believing they were different capture sets.
+`eval/check_duplicates.py` shows they are **the same 1800 source images**:
+
+| evidence | count |
 |---|---|
-| overall | **93.80%** |
-| NEU-DET captures (used at inference) | **95.40%** |
-| NEU-CLS captures | 95.34% |
-| `no_defect` background crops | 72.84% (n=81) |
+| cross-set pairs with pHash == 0 AND dHash == 0 (bit-identical content) | **1045** |
+| same-label cross-set pairs within perceptual threshold 6 | 7701 |
+| exact pixel-duplicate groups within a set | 2 |
 
-Per class:
+The file numbering makes the mapping explicit: `Cr_1.bmp` ↔ `crazing_1.jpg`,
+`Pa_101.bmp` ↔ `patches_101.jpg`. (The 13389 "cross-label" pairs are pHash
+collisions, not contradictory labels — a 64-bit 8x8 DCT hash is not discriminative
+at threshold 6, which is why identity is keyed on class + source index and the hash
+is used only to verify.)
 
-| class | precision | recall | F1 | support |
-|---|---|---|---|---|
-| crazing | 0.968 | 0.994 | **0.981** | 180 |
-| patches | 0.942 | 0.989 | **0.965** | 179 |
-| rolled-in_scale | 0.968 | 1.000 | **0.984** | 180 |
-| pitted_surface | 0.925 | 0.961 | **0.943** | 175 |
-| scratches | 0.930 | 0.889 | 0.909 | 171 |
-| inclusion | 0.879 | 0.889 | 0.884 | 160 |
-| no_defect | 0.983 | 0.728 | 0.837 | 81 |
+Consequence: a random per-row split could put `Cr_1` in train and `crazing_1` in
+test, and the model scored a memorised image.
 
-**Dominant confusions** (this is the interesting part, not the worst number):
+**Fix** (`eval/splits.py`): deduplicate to **1800 unique images**, keeping the DET
+copy since inference runs on DET captures, then split **by identity group** so no
+group can straddle a boundary.
 
-| count | true → predicted |
+```
+raw files enumerated : 3600 (1800 CLS + 1800 DET)
+unique source images : 1800   <- CLS and DET are the same survey
+rows after dedupe    : 2069  (defect 1800 + background 269)
+[grouped] train=1138 val=310 test=621
+         group overlap: {'train&val': 0, 'train&test': 0, 'val&test': 0}  -> CLEAN
+```
+
+**Effect on the headline: 93.80% → 92.75%** (the 16-Gabor model; 93.08% → 92.75%
+for the shipped 8-Gabor one). The leak was worth ~0.3–0.7 points, not
+catastrophically — but the number is now defensible, which matters more.
+
+### Leak 2 — temperature fitted on the split used to report ECE
+
+The calibration temperature was fitted on the held-out split and ECE was then
+reported **on that same split**, so the calibration figure was optimistic by
+construction.
+
+**Fix:** three-way split. Weights fitted on train, temperature fitted on
+**validation**, everything reported on **test**.
+
+| | ECE on TEST |
 |---|---|
-| 15 | inclusion → pitted_surface |
-| 14 | scratches → inclusion |
-| 12 | scratches → inclusion (second block) |
-| 9 | inclusion → scratches |
-| 7 | no_defect → crazing |
-
-Thin, linear, low-contrast features are the hard cases: `inclusion` and
-`scratches` are both elongated dark streaks at this resolution.
+| before scaling | 0.0886 |
+| after scaling (T = 0.75, fitted on val) | **0.0338** |
 
 ---
 
-## 3. Triage — the operating point
+## 2. Classification — 7 classes
 
-Thresholds were **measured, not chosen by feel**, by sweeping the held-out split
-(`eval/triage_eval.py`, 1161 images). Shipped setting: `ESCALATE_MIN=0.85`,
-`REVIEW_MIN=0.55`, `PASS_MIN=0.80`.
+Deduplicated to 1800 unique images plus 269 `no_defect` crops taken from regions
+**outside** every annotation box (NEU contains only defective images, so a triage
+system needs a clean class to be able to output "pass"). Grouped split, seed 0.
+
+| | held-out accuracy |
+|---|---|
+| overall | **92.75%** (n=621) |
+| NEU-DET captures (used at inference) | 94.81% |
+| `no_defect` background crops | 79.01% (n=81) |
+
+| class | precision | recall | F1 |
+|---|---|---|---|
+| rolled-in_scale | 0.957 | 1.000 | **0.978** |
+| patches | 0.977 | 0.956 | **0.966** |
+| crazing | 0.937 | 0.989 | 0.962 |
+| pitted_surface | 0.904 | 0.944 | 0.924 |
+| scratches | 0.976 | 0.889 | 0.930 |
+| no_defect | 0.970 | 0.790 | 0.871 |
+| inclusion | 0.804 | 0.911 | 0.854 |
+
+**Dominant confusions:** `scratches → inclusion` (10), `no_defect → inclusion` (6),
+`inclusion → pitted_surface` (5), `no_defect → rolled-in_scale` (4),
+`no_defect → crazing` (4).
+
+Thin, linear, low-contrast streaks are the hard cases; `inclusion` is the weakest
+class and `no_defect` recall is limited by having only 269 crops to learn from.
+
+---
+
+## 3. Triage — the operating point, with the context it needs
+
+A system that sends everything to a human also misses zero defects. **Sensitivity
+alone is therefore meaningless**, so it is reported with the rate of automatic
+decisions and the precision of the automatic passes.
+
+Thresholds were measured, not chosen by feel, by sweeping the held-out test split
+(`eval/triage_eval.py`, 621 images: 540 defect, 81 clean). Shipped setting
+`ESCALATE_MIN=0.85`:
 
 | metric | value |
 |---|---|
-| **defect sensitivity** | **1.0000** — 0 of 1080 defects silently passed |
-| auto-escalate rate | 42.8% of defects closed without human re-inspection |
-| human review rate | 51.2% of all traffic |
-| clean captures released automatically | 48.1% |
-| second-opinion rate | remainder, low-confidence cases |
+| **defect sensitivity** | **1.0000** — 0 of 540 defects silently passed |
+| missed defects | **0** |
+| **auto-pass precision** | **1.000** — of images auto-passed, all genuinely clean |
+| auto-pass rate | 7.1% of all traffic |
+| clean images released automatically | 54.3% (clean_reviewed 45.7%) |
+| auto-escalate rate | 38.0% of defects closed without human re-inspection |
+| human review rate | 51.0% of all traffic |
+| second-opinion rate | 2.9% of all traffic |
 
-### Confidence calibration
+Sensitivity is 1.0000 at **every** threshold from 0.50 to 0.95, so the threshold is
+not buying safety — it is buying automation. At 0.85 the system auto-closes 38% of
+defects, auto-passes clean captures with 100% precision, and still sends the
+reviewable remainder to a person. That is a real triage operating point, not a
+system that defers everything.
 
-Raw softmax was systematically **under-confident** (stated 0.79 where accuracy
-was 0.94), which made the agent escalate far too little. Fitting a single
-temperature on the held-out split:
-
-| | ECE |
-|---|---|
-| before | 0.0750 |
-| after (T = 0.70) | **0.0218** |
-
-Reliability after scaling:
+### Confidence calibration (fitted on validation, reported on test)
 
 | stated confidence | n | actual accuracy |
 |---|---|---|
-| 0.00–0.50 | 20 | 0.300 |
-| 0.50–0.70 | 77 | 0.597 |
-| 0.70–0.85 | 110 | 0.845 |
-| 0.85–0.95 | 210 | 0.962 |
-| 0.95–1.00 | 744 | 0.985 |
+| 0.00–0.50 | 18 | 0.444 |
+| 0.50–0.70 | 51 | 0.725 |
+| 0.70–0.85 | 72 | 0.889 |
+| 0.85–0.95 | 120 | 0.933 |
+| 0.95–1.00 | 360 | 0.992 |
 
-Temperature cannot change the argmax, so accuracy is identical before and after —
-only the stated confidence moves, which is what lets the agent act on a number.
+The model remains mildly **under**-confident in the mid bands, so
+`ESCALATE_MIN=0.85` is conservative rather than aggressive.
 
 ### A correction to our own metric
 
-A first version of this evaluation counted any low-confidence defect prediction
-as a "miss", reporting 46 misses. That was wrong: low confidence routes to
-second opinion and then human review, so those are review traffic, not misses. The
-real failure is a defect the classifier **actively calls clean**. Corrected, the
-count is 0.
+An earlier version counted any low-confidence defect prediction as a "miss",
+reporting 46 misses. That was wrong: low confidence routes to second opinion and
+then human review, so those are review traffic, not misses. The real failure is a
+defect the classifier **actively calls clean**. Corrected, the count is 0.
+
+---
+
+## 3a. Accuracy versus latency
+
+See `docs/BENCHMARK-RESULTS.md` §2 for the full table. Halving the Gabor bank
+(16 → 8) is **2.20x faster**; on the 7-class task it costs 0.33 accuracy points
+(93.08% → 92.75%) and leaves triage behaviour unchanged. Adopted, because
+throughput matters on an inspection line and 92.75% is still strong. Dropping
+Gabor entirely would save little more and costs 5.18 points.
 
 ---
 

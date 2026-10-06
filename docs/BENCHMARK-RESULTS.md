@@ -10,66 +10,108 @@ versions. **They disagree, and that is the most useful thing we measured.**
 
 ## 1. Production pipeline — rolled-steel surface inspection (NEU)
 
-The pipeline the product actually runs: 16 Gabor `filter2D` responses, 2 Sobel
+The pipeline the product actually runs: **8** Gabor `filter2D` responses, 2 Sobel
 gradients, magnitude, orientation histogram, 3 box blurs + `absdiff`, Laplacian,
 and the localiser (blur + absdiff + threshold + morphology + connected
 components).
 
-| arm | instance | library | OpenCV | fps | ms/frame |
-|---|---|---|---|---|---|
-| A | `c8g.medium` (Graviton4) | **COOL** | 4.14.0-pre | 170.23 | 5.87 |
-| B | `c8g.medium` (Graviton4) | DIY pip | 4.14.0 | 175.90 | 5.68 |
+| arm | instance | library | OpenCV | fps | ms/frame | USD/hr | **USD / 1000 frames** |
+|---|---|---|---|---|---|---|---|
+| A | `c8g.medium` Graviton4 | **COOL** | 4.14.0-pre | 300.38 | 3.33 | 0.072 | **0.000067** |
+| B | `c8g.medium` Graviton4 | DIY pip | 4.14.0 | 321.44 | 3.11 | 0.072 | 0.000062 |
+| C | `t3.medium` x86_64 | DIY pip | 4.14.0 | 269.62 | 3.71 | 0.0416 | **0.000043** |
 
-**A/B = 0.97x — parity. COOL is not faster on our production workload.**
+| comparison | meaning | result |
+|---|---|---|
+| **A/B** | **library only** (same instance, same version) | **0.93x — COOL slower** |
+| A/C | COOL on Graviton vs DIY on x86 | **1.11x — Graviton wins throughput** |
+| B/C | DIY Graviton vs DIY x86 | 1.19x — the *hardware* wins, not COOL |
 
-### Why: one op is 82% of the pipeline and COOL does not touch it
+### The three honest conclusions
 
-| op | COOL (A) | DIY (B) | COOL faster by |
-|---|---|---|---|
-| **`gabor_filter2D_x16`** | **4.681** | **4.681** | **1.00x** |
-| `sobel_x2` | 0.0282 | 0.0284 | 0.99x |
-| `magnitude` | 0.0126 | 0.0126 | 1.00x |
-| `blur_box9` | 0.0264 | 0.0239 | 0.95x |
-| `blur_box21` | 0.0293 | 0.0277 | 0.95x |
-| `blur_box41` | 0.0364 | 0.0339 | 0.93x |
-| `absdiff` | 0.0033 | 0.0032 | 0.97x |
-| `threshold` | 0.0054 | 0.0032 | **0.59x** |
-| `morph_close` | 0.0143 | 0.0146 | 1.02x |
-| `connected_components` | 0.0466 | 0.0493 | 1.06x |
-| `laplacian` | 0.0131 | 0.0106 | 0.81x |
-| `resize_128` | 0.0021 | 0.0028 | **1.33x** |
-| `cvtColor` | 0.0129 | 0.0162 | **1.23x** |
-| `canny_legacy` (unused) | 0.1886 | 0.2813 | **1.49x** |
-| `adaptiveThreshold_legacy` (unused) | 0.1599 | 0.0892 | **0.56x** |
+1. **COOL is not faster than stock OpenCV on our workload** (0.93x). The dominant
+   op is `gabor_filter2D`, which COOL leaves untouched.
+2. **Graviton is genuinely faster than x86 here** (1.19x DIY-on-DIY), and COOL
+   inherits that: A/C = 1.11x. Any A-vs-C headline is mostly a hardware result.
+3. **x86 is the cheapest per frame.** `t3.medium` ($0.0416/hr) is ~42% cheaper per
+   hour than `c8g.medium` ($0.072/hr), and its throughput deficit does not close
+   the gap: $0.000043 vs $0.000067 per 1000 frames. We tested this specifically
+   because "Graviton is cheaper" is a common claim and **it does not hold at these
+   instance sizes.** COOL's Marketplace licence fee is additional and is *not*
+   included in arm A's figure, so A's true cost is higher still.
 
-(ms/call. The two `legacy` ops are not in the production path; they are kept for
-continuity and because `adaptiveThreshold` is COOL's clearest regression.)
+### Per-op, COOL vs stock on identical hardware (A vs B)
 
-COOL's wins are real — `Canny` 1.49x, `resize` 1.33x, `cvtColor` 1.23x — but on
-this pipeline those operations together account for under 6% of runtime. The
-dominant op is a 1xN convolution, and COOL leaves it untouched at exactly 1.00x.
+| op | COOL faster by |
+|---|---|
+| `canny_legacy` (not in pipeline) | **1.57x** |
+| `cvtColor` | **1.24x** |
+| `connected_components` | ~1.0x |
+| `blur_box*`, `absdiff`, `morph_close` | ~1.0x |
+| `gabor_filter2D` (dominant op) | **1.00x** |
+| `adaptiveThreshold_legacy` (not in pipeline) | **0.57x** |
 
-**This is the honest conclusion: COOL's benefit is entirely determined by which
-operations a workload happens to use, and the operation our classifier depends on
-is not among them.**
+COOL's genuine wins (`Canny`, `cvtColor`) are not in our hot path, and the op that
+*is* in our hot path is the one COOL does not accelerate.
+
+### Caveats on these figures
+
+- **Single run per arm.** The B/C per-op ratios (up to 3.5x on trivial ops) are
+  larger than the end-to-end ratio and are probably inflated by run-to-run and
+  burstable-instance variance. `t3.medium` is a burstable family. Treat the
+  per-op table as indicative and the end-to-end numbers as the reliable ones.
+- COOL's licence fee is excluded from arm A.
+- Region: us-east-1. On-demand prices; no Savings Plans or Spot.
 
 ---
 
-## 2. Earlier weld pipeline — retained as a contrast, not a second product
+## 2. Feature-variant study — is a cheaper descriptor just as good?
+
+Because COOL's benefit is op-dependent, the descriptor's composition determines
+the answer. `eval/feature_variants.py` trained each variant on the same
+leakage-free split:
+
+| variant | Gabor filters | ms/frame | fps | accuracy |
+|---|---|---|---|---|
+| gabor16 (was production) | 16 | 12.589 | 79.4 | 95.37% |
+| **gabor8 (now production)** | **8** | **5.723** | **174.7** | **95.37%** |
+| gabor4 | 2 | 6.518 | 153.4 | 93.89% |
+| gabor0 (gradients only) | 0 | 5.841 | 171.2 | 90.19% |
+
+**Halving the Gabor bank is 2.20x faster at identical accuracy.** Dropping Gabor
+entirely costs 5.18 points, so orientation-selective texture is doing real work —
+it just does not need 16 convolutions.
+
+We adopted `gabor8`. Two honesty notes:
+
+- On the 6-class task above the accuracy was *exactly* equal. On the full 7-class
+  task including the `no_defect` class, gabor8 scores **92.75%** vs **93.08%** for
+  gabor16 — a real 0.33-point cost, not zero. Triage behaviour was unchanged
+  (0 missed defects, auto-pass precision 1.000) and the clean auto-pass rate
+  actually improved (42.0% → 45.7%).
+- This was **not** chosen to flatter COOL. It was adopted because 2.2x throughput
+  for 0.33 accuracy points is a good trade for a real-time inspection line, and
+  the measurement is published either way. COOL's position on the cheaper pipeline
+  is still parity (0.93x).
+
+---
+
+## 3. Earlier weld pipeline — retained as a contrast, not a product
 
 The pre-rewrite pipeline was Canny/blur/contour dominated. Same instances, same
-versions:
+libraries, **before the Gabor kernel-size fix**, so it is a different pipeline
+measuring different work:
 
 | arm | library | OpenCV | fps | ms/frame |
 |---|---|---|---|---|
 | A | COOL | 4.14.0-pre | 893.42 | 1.12 |
 | B | DIY pip | 4.14.0 | 702.60 | 1.42 |
 
-**A/B = 1.27x**, with `Canny` at 3.15x — exactly the op COOL accelerates.
+**A/B = 1.27x**, with `Canny` at 3.15x — the op COOL accelerates.
 
-Same hardware, same libraries, same measurement harness. **1.27x on one
-pipeline, 0.97x on the other.** We report both; we do not ship only the flattering
-one.
+Labelled explicitly: this is **not** the shipped pipeline and its numbers must not
+be compared against section 1. It exists to show that COOL's benefit is entirely a
+function of which operations a workload uses.
 
 ---
 

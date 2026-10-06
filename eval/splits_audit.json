@@ -1,0 +1,13 @@
+{
+  "unique_source_images": 1800,
+  "rows_after_dedupe": 2069,
+  "train": 1138,
+  "val": 310,
+  "test": 621,
+  "group_overlap": {
+    "train&val": 0,
+    "train&test": 0,
+    "val&test": 0
+  },
+  "leakage_free": true
+}

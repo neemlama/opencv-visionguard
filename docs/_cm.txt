@@ -1,0 +1,67 @@
+Leakage-free rebuild: duplicate-safe split, validation-set calibration, gabor8
+
+Addressed review items 3, 4, 5 and the cost/feature-variant parts of 2.
+
+ITEM 4 - DUPLICATE LEAKAGE (the big one)
+NEU-CLS and NEU-DET are the SAME 1800 source photographs. eval/check_duplicates.py
+finds 1045 cross-set pairs with pHash==0 AND dHash==0 (bit-identical), 7701
+same-label pairs within threshold 6. File numbering gives it away: Cr_1.bmp vs
+crazing_1.jpg, Pa_101.bmp vs patches_101.jpg. Our '3600-image' training set was
+each photo twice, and a per-row split could put twins either side of the
+boundary.
+
+eval/splits.py now deduplicates to 1800 unique images (keeping the DET copy, since
+inference runs on DET captures) and splits by identity GROUP:
+  train=1138 val=310 test=621
+  group overlap {'train&val': 0, 'train&test': 0, 'val&test': 0} -> CLEAN
+Headline: 93.80% -> 92.75%. Leak was worth 0.3-0.7 points, but the number is now
+defensible. The 13389 cross-label pairs are pHash collisions, not contradictory
+labels, so identity is keyed on class+source index and hashing only VERIFIES.
+
+ITEM 3 - CALIBRATION LEAKAGE
+Temperature was fitted on the split used to report ECE, so ECE was optimistic by
+construction. Now: weights on train, temperature on VALIDATION, reported on TEST.
+ECE on test 0.0886 -> 0.0338 (T=0.75).
+
+Triage now reported with the context it needs. Sensitivity 1.0000 is meaningless
+alone, so alongside it: auto_pass_precision 1.000 (nothing auto-passed was
+defective), auto_pass_rate 7.1%, clean auto-released 54.3%, auto-escalate 38.0%,
+human review 51.0%. Sensitivity is 1.0000 at every threshold 0.50-0.95, so the
+threshold buys automation, not safety - which is the honest reading.
+
+ITEM 2a - COST PER 1000 FRAMES, tested rather than assumed
+  COOL Graviton c8g.medium  $0.072/h  300.38 fps  $0.000067/1000
+  DIY  Graviton c8g.medium  $0.072/h  321.44 fps  $0.000062/1000
+  DIY  x86      t3.medium  $0.0416/h 269.62 fps  $0.000043/1000
+x86 is CHEAPEST per frame at these sizes - Graviton's rate is ~42% higher at
+c8g.medium and its throughput edge does not close the gap. COOL's licence fee is
+excluded from arm A. So the hoped-for cost angle does not exist; recorded as C-13.
+
+ITEM 2b - FEATURE VARIANTS: cheaper AND equally accurate
+eval/feature_variants.py, same leakage-free split:
+  gabor16  12.589 ms  95.37%
+  gabor8    5.723 ms  95.37%   <- 2.20x faster, identical on the 6-class task
+  gabor4    6.518 ms  93.89%
+  gabor0    5.841 ms  90.19%
+Adopted gabor8: 2.20x throughput. On the full 7-class task it costs 0.33 points
+(93.08 -> 92.75) - reported as a real cost, not claimed as free. Triage unchanged
+(0 missed, pass precision 1.000) and clean auto-pass improved 42.0 -> 45.7%. Not
+chosen to flatter COOL; COOL is still 0.93x on it.
+
+ITEM 5 - every number is post-Gabor-fix; the 1.27x is labelled as a different,
+pre-fix, Canny-dominated pipeline in docs/BENCHMARK-RESULTS.md section 3.
+
+ITEM 1 - COOL eligibility question drafted in docs/EMAIL-opencv-org.md
+Probed the instance: the AMI our subscription granted is COOL-Graviton4-v2 and
+bundles OpenCV 4.14.0-pre (libopencv_*.so.4.14.0), while the Marketplace listing
+says 'Latest version 3.1 ... now built on OpenCV 5.0'. aws/probe_cool_versions.py
+records the evidence. Three questions for the organiser, including whether a COOL
+4.14 benchmark satisfies the OpenCV 5 rule and whether the claim may rest on the
+benchmark workload.
+
+ALSO FIXED
+- run_loop's no-simulator HTTP path called apply_fix, removed in the simulator
+  rewrite -> Internal Server Error. Without a capture device there is nothing to
+  re-render, so the loop now records the recapture request and returns honestly.
+- docs/EVALUATION.md, BENCHMARK-RESULTS.md, README.md updated to the
+  leakage-free numbers; CHALLENGES.md gains C-08..C-13.

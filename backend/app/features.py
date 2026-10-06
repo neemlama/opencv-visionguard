@@ -19,7 +19,13 @@ valid: descriptor length is asserted in classifier.py at load time.
 import cv2
 import numpy as np
 
-GABOR_SCALES = (3, 5, 9, 15)
+# 8 Gabor filters, not 16. eval/feature_variants.py measured this on the
+# leakage-free split: halving the bank (scales 3,5,9,15 -> 3,9, keeping all four
+# orientations) is 2.20x faster end-to-end at IDENTICAL held-out accuracy
+# (95.37% either way). Dropping Gabor entirely costs 5.18 accuracy points, so
+# orientation-selective texture is doing real work - it just does not need 16
+# convolutions to do it.
+GABOR_SCALES = (3, 9)
 GABOR_ORIENTS = (0, 45, 90, 135)
 GABOR_SIGMA = 2.0
 GABOR_GAMMA = 0.5

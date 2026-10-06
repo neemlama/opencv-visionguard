@@ -8,24 +8,24 @@
     "scratches",
     "no_defect"
   ],
-  "temperature": 0.7,
-  "dataset": "NEU-CLS + NEU-DET",
-  "images": 3869,
-  "train": 2708,
-  "test": 1161,
-  "test_fraction": 0.3,
-  "seed": 0,
-  "held_out_accuracy": 0.938,
-  "macro_f1": 0.9289,
+  "temperature": 0.75,
+  "dataset": "NEU (deduplicated: CLS and DET are the same survey)",
+  "unique_source_images": 1800,
+  "rows": 2069,
+  "train": 1138,
+  "val": 310,
+  "test": 621,
+  "split": "grouped by source image, stratified by class",
+  "split_seed": 0,
+  "held_out_accuracy": 0.9275,
+  "macro_f1": 0.9265,
+  "temperature_fitted_on": "validation split",
+  "ece_test_before": 0.0903,
+  "ece_test_after": 0.0361,
   "accuracy_by_source": {
-    "bg": 0.7284,
-    "cls": 0.9534,
-    "det": 0.954
+    "bg": 0.7901,
+    "det": 0.9481
   },
-  "mean_top1_confidence": 0.9265,
-  "epochs": 400,
-  "descriptor_len": 69,
-  "ece_before_scaling": 0.0679,
-  "ece_after_scaling": 0.0218,
-  "trained_on": "public NEU-CLS + NEU-DET images; no_defect from unannotated regions"
+  "descriptor_len": 53,
+  "epochs": 400
 }

@@ -30,7 +30,7 @@ import numpy as np
 
 COOL_ROOTS = [Path("/opt/cool"), Path("/opt/opencv_install")]
 IMAGE_SIZE = 128
-GABOR_SCALES = (3, 5, 9, 15)
+GABOR_SCALES = (3, 9)
 GABOR_ORIENTS = (0, 45, 90, 135)
 ANOM_BOXES = (9, 21, 41)
 ANOM_LEVEL = 12.0

@@ -232,3 +232,165 @@ python3.12 bench.py
 The x86/Arm baseline therefore cannot be a container build — it must be the same
 Graviton instance family running DIY `pip install opencv-python`, which isolates
 the library's contribution from the hardware's. See `docs/COOL-setup.md`.
+---
+
+## C-08 — NEU-CLS and NEU-DET are the same photographs (duplicate leakage)
+
+**Severity:** Critical. This invalidated our headline accuracy number.
+
+**Symptom.** We trained on "CLS + DET" believing they were separate capture sets,
+giving a 3600-image training set. Accuracy looked strong at 93.80%.
+
+**Root cause.** `eval/check_duplicates.py` compares the two sets perceptually:
+
+| evidence | count |
+|---|---|
+| cross-set pairs, pHash == 0 AND dHash == 0 (bit-identical) | **1045** |
+| same-label cross-set pairs within perceptual threshold 6 | 7701 |
+| exact pixel-duplicate groups within a set | 2 |
+
+The file numbering is explicit: `Cr_1.bmp` <-> `crazing_1.jpg`,
+`Pa_101.bmp` <-> `patches_101.jpg`. **They are the same 1800 source images.** A
+random per-row split could place `Cr_1` in train and `crazing_1` in test, so the
+model was scored on a memorised image.
+
+Note on method: 13389 "cross-label" pairs also fell inside the threshold. Those
+are hash collisions, not contradictory labels - a 64-bit 8x8 DCT hash is not
+discriminative at threshold 6. We therefore key identity on (class, source index)
+and use hashing only to VERIFY, which is the robust order.
+
+**Fix** (`eval/splits.py`): deduplicate to 1800 unique images keeping the DET copy
+(inference runs on DET captures), then split by identity GROUP.
+
+```
+[grouped] train=1138 val=310 test=621
+         group overlap: {'train&val': 0, 'train&test': 0, 'val&test': 0}  -> CLEAN
+```
+
+**Result.** 93.80% -> 92.75%. The leak was worth 0.3-0.7 points, not
+catastrophically - but the number is now defensible, which matters more than the
+value.
+
+**What we learned.** Dataset names imply independence; filenames prove it.
+Before combining two releases of a dataset, hash them against each other.
+
+---
+
+## C-09 — Calibration temperature fitted on the split used to report ECE
+
+**Severity:** Moderate, and self-inflicted.
+
+We fitted the temperature on the held-out split and then reported ECE on that
+same split, so the calibration figure was optimistic by construction - ECE cannot
+improve on data it was tuned against.
+
+**Fix.** Three-way split: weights on train, temperature on validation, all
+reporting on test.
+
+| | ECE on test |
+|---|---|
+| before | 0.0886 |
+| after (T = 0.75, fitted on val) | **0.0338** |
+
+**What we learned.** "Held-out" is not one thing. A parameter fitted on a split
+makes that split a validation set, not a test set.
+
+---
+
+## C-10 — `getGaborKernel((0,0))` silently produced (1,1) kernels
+
+**Severity:** High, and invisible without checking.
+
+**Symptom.** Our feature bank was 16 Gabor filters. Accuracy plateaued and we had
+assumed texture features were simply weak on this data.
+
+**Root cause.** `cv2.getGaborKernel((0,0), ...)` asks OpenCV to auto-size the
+kernel. On OpenCV 5.0.0 it returns a proper 1xN column kernel only at 0 degrees:
+
+```
+sigma=  3 auto ksize=(1, 19)
+sigma=  3 auto ksize=(1,  1)   <- orientations 45, 90, 135
+```
+
+**12 of our 16 Gabor features were computed from a 1x1 kernel** - i.e. they were
+duplicates of mean intensity and carried no orientation information at all.
+
+**Fix.** Compute the size explicitly. OpenCV 5's auto-size is exactly `6*sigma+1`,
+verified bit-identical:
+
+```python
+ksize = (1, 6 * sigma + 1)
+```
+
+**Result.** Accuracy improved 93.02% -> 93.80% on the then-current split. The
+feature bank had been crippled and the classifier had compensated.
+
+The same `(0,0)` is also a portability trap: on the 4.14 control build it was taken
+literally and `getGaborKernel` tried to allocate 1.8e19 bytes and died with
+"Insufficient memory".
+
+**What we learned.** A convenience default that silently returns a degenerate
+result is worse than an error. Verify auto-sizing behaviour per library version.
+
+---
+
+## C-11 — AWS SSM silently truncated our 830KB app payload
+
+**Severity:** High, cost two failed deploys.
+
+**Symptom.** Deployment failed with `gzip: stdin: not in gzip format` while
+extracting the app tarball. `SendCommand` also rejects requests over 97KB.
+
+**Root cause, two bugs compounding:**
+1. `run_remote` returned from INSIDE its chunk loop, so only the first batch ever
+   executed. The payload arrived as its first ~66KB.
+2. The payload is one long base64 string, so the generic request chunker split it
+   mid-string.
+
+**Fix.** Accumulate output across all chunks and return after the loop; ship the
+payload as explicit 6KB `printf >> file` appends, then decode once. Also cut the
+payload from 830KB to 152KB by shipping only `samples/neu` instead of the whole
+`samples/` directory.
+
+**What we learned.** Retry loops that "succeed" can hide partial execution. Assert
+on the payload (`gzip -t`) rather than trusting a transport.
+
+---
+
+## C-12 — Deployed service healthy on localhost, unreachable from the internet
+
+**Severity:** Moderate, and a nasty one to diagnose.
+
+**Symptom.** The container reported `SETUP_OK`, systemd was `active`, uvicorn was
+up, `curl localhost:8000/health` returned 200, nginx returned 200 - and the public
+URL refused connections.
+
+**Root cause.** The default VPC security group permits only SSH. We launched into
+it and never added an ingress rule.
+
+**Fix.** `ensure_sg()` creates/reuses `forgesight-endpoint-sg` with TCP 80 open and
+attaches it. `docs/DEPLOYMENT.md` lists this in the failure table, because
+"healthy locally, dead externally" is a state we will hit again.
+
+---
+
+## C-13 - Graviton is not cheaper per frame at these instance sizes
+
+**Severity:** Moderate - it removed a claim we intended to make.
+
+We expected Graviton to win on cost per 1000 images, a metric the rules explicitly
+allow. Measured on-demand, us-east-1:
+
+| arm | instance | USD/hr | fps | USD / 1000 frames |
+|---|---|---|---|---|
+| COOL on Graviton | `c8g.medium` | 0.072 | 300.38 | 0.000067 |
+| DIY on Graviton | `c8g.medium` | 0.072 | 321.44 | 0.000062 |
+| DIY on x86 | `t3.medium` | 0.0416 | 269.62 | **0.000043** |
+
+Graviton's hourly rate is ~42% higher than `t3.medium` at this size, and its
+throughput advantage does not close the gap. COOL's licence fee is not even
+included in arm A.
+
+**What we learned.** "Graviton is cheaper" is a family-level intuition that breaks
+down at small sizes, where the per-core advantage is offset by the rate card.
+Always measure cost per unit of work, not per hour.

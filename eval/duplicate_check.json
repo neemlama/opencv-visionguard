@@ -1,0 +1,187 @@
+{
+  "cls": 1800,
+  "det": 1800,
+  "exact_duplicate_groups": 2,
+  "cross_set_near_duplicates": 21090,
+  "same_label_near_duplicates": 7701,
+  "cross_label_near_duplicates": 13389,
+  "within_set_exact_duplicate_groups": 2,
+  "verdict": "LEAKAGE: near-duplicate pairs span the two sets with the same label, so the combined split is optimistic",
+  "examples": [
+    {
+      "cls": "Cr_1.bmp",
+      "det": "crazing_1.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_100.bmp",
+      "det": "crazing_100.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_101.bmp",
+      "det": "crazing_101.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_102.bmp",
+      "det": "crazing_102.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_103.bmp",
+      "det": "crazing_103.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_104.bmp",
+      "det": "crazing_104.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_106.bmp",
+      "det": "crazing_106.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_107.bmp",
+      "det": "crazing_107.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_108.bmp",
+      "det": "crazing_108.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_109.bmp",
+      "det": "crazing_109.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_111.bmp",
+      "det": "crazing_111.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_112.bmp",
+      "det": "crazing_112.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_113.bmp",
+      "det": "crazing_113.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_115.bmp",
+      "det": "crazing_115.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_12.bmp",
+      "det": "crazing_12.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_120.bmp",
+      "det": "crazing_120.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_121.bmp",
+      "det": "crazing_121.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_122.bmp",
+      "det": "crazing_122.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_123.bmp",
+      "det": "crazing_123.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_124.bmp",
+      "det": "crazing_124.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_125.bmp",
+      "det": "crazing_125.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_126.bmp",
+      "det": "crazing_126.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_127.bmp",
+      "det": "crazing_127.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_128.bmp",
+      "det": "crazing_128.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    },
+    {
+      "cls": "Cr_129.bmp",
+      "det": "crazing_129.jpg",
+      "label": "crazing",
+      "phash": 0,
+      "dhash": 0
+    }
+  ]
+}

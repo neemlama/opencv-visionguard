@@ -1,155 +1,212 @@
 {
   "per_class": {
     "crazing": {
-      "precision": 0.9676,
-      "recall": 0.9944,
-      "f1": 0.9808,
-      "support": 180
+      "precision": 0.9368,
+      "recall": 0.9889,
+      "f1": 0.9622,
+      "support": 90
     },
     "inclusion": {
-      "precision": 0.8791,
-      "recall": 0.8889,
-      "f1": 0.884,
-      "support": 180
+      "precision": 0.8039,
+      "recall": 0.9111,
+      "f1": 0.8542,
+      "support": 90
     },
     "patches": {
-      "precision": 0.9418,
-      "recall": 0.9889,
-      "f1": 0.9648,
-      "support": 180
+      "precision": 0.9773,
+      "recall": 0.9556,
+      "f1": 0.9663,
+      "support": 90
     },
     "pitted_surface": {
-      "precision": 0.9251,
-      "recall": 0.9611,
-      "f1": 0.9428,
-      "support": 180
+      "precision": 0.9043,
+      "recall": 0.9444,
+      "f1": 0.9239,
+      "support": 90
     },
     "rolled-in_scale": {
-      "precision": 0.9677,
+      "precision": 0.9574,
       "recall": 1.0,
-      "f1": 0.9836,
-      "support": 180
+      "f1": 0.9783,
+      "support": 90
     },
     "scratches": {
-      "precision": 0.9302,
+      "precision": 0.9756,
       "recall": 0.8889,
-      "f1": 0.9091,
-      "support": 180
+      "f1": 0.9302,
+      "support": 90
     },
     "no_defect": {
-      "precision": 0.9833,
-      "recall": 0.7284,
-      "f1": 0.8369,
+      "precision": 0.9697,
+      "recall": 0.7901,
+      "f1": 0.8707,
       "support": 81
     }
   },
   "confusion": [
     [
-      179,
+      89,
       0,
       0,
+      1,
       0,
+      0,
+      0
+    ],
+    [
+      0,
+      82,
+      2,
+      5,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      2,
+      86,
+      1,
+      0,
+      0,
+      1
+    ],
+    [
+      2,
+      2,
+      0,
+      85,
       0,
       0,
       1
     ],
     [
       0,
-      160,
-      3,
-      8,
       0,
-      9,
+      0,
+      0,
+      90,
+      0,
       0
     ],
     [
+      0,
+      10,
+      0,
+      0,
+      0,
+      80,
+      0
+    ],
+    [
+      4,
+      6,
       0,
       2,
-      178,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      2,
-      3,
-      0,
-      173,
-      0,
-      2,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      180,
-      0,
-      0
-    ],
-    [
-      0,
-      12,
       4,
       1,
-      3,
-      160,
-      0
-    ],
-    [
-      4,
-      5,
-      4,
-      5,
-      3,
-      1,
-      59
+      64
     ]
   ],
-  "held_out_accuracy": 0.938,
-  "macro_f1": 0.9289,
+  "held_out_accuracy": 0.9275,
+  "macro_f1": 0.9265,
+  "unique_source_images": 1800,
+  "split_sizes": {
+    "train": 1138,
+    "val": 310,
+    "test": 621
+  },
+  "temperature": 0.75,
+  "ece_test_before": 0.0903,
+  "ece_test_after": 0.0361,
+  "reliability": [
+    {
+      "bin": "0.3-0.4",
+      "n": 6,
+      "stated": 0.355,
+      "actual": 0.333
+    },
+    {
+      "bin": "0.4-0.5",
+      "n": 11,
+      "stated": 0.451,
+      "actual": 0.455
+    },
+    {
+      "bin": "0.5-0.6",
+      "n": 28,
+      "stated": 0.555,
+      "actual": 0.679
+    },
+    {
+      "bin": "0.6-0.7",
+      "n": 32,
+      "stated": 0.65,
+      "actual": 0.906
+    },
+    {
+      "bin": "0.7-0.8",
+      "n": 46,
+      "stated": 0.75,
+      "actual": 0.761
+    },
+    {
+      "bin": "0.8-0.9",
+      "n": 76,
+      "stated": 0.854,
+      "actual": 0.921
+    },
+    {
+      "bin": "0.9-1.0",
+      "n": 422,
+      "stated": 0.974,
+      "actual": 0.986
+    }
+  ],
   "top_confusions": [
     {
-      "count": 12,
+      "count": 10,
       "true": "scratches",
       "pred": "inclusion"
     },
     {
-      "count": 9,
-      "true": "inclusion",
-      "pred": "scratches"
-    },
-    {
-      "count": 8,
-      "true": "inclusion",
-      "pred": "pitted_surface"
-    },
-    {
-      "count": 5,
-      "true": "no_defect",
-      "pred": "pitted_surface"
-    },
-    {
-      "count": 5,
+      "count": 6,
       "true": "no_defect",
       "pred": "inclusion"
+    },
+    {
+      "count": 5,
+      "true": "inclusion",
+      "pred": "pitted_surface"
     },
     {
       "count": 4,
-      "true": "scratches",
-      "pred": "patches"
+      "true": "no_defect",
+      "pred": "rolled-in_scale"
+    },
+    {
+      "count": 4,
+      "true": "no_defect",
+      "pred": "crazing"
+    },
+    {
+      "count": 2,
+      "true": "pitted_surface",
+      "pred": "inclusion"
     }
   ],
+  "accuracy_by_source": {
+    "bg": 0.7901,
+    "det": 0.9481
+  },
   "config": {
+    "include_background": true,
     "test_fraction": 0.3,
+    "val_fraction": 0.15,
     "seed": 0,
     "epochs": 400,
     "lr": 0.5,
     "l2": 0.001,
-    "out": "C:\\Users\\wecal\\Documents\\Codes\\opencv-visionguard\\eval\\classifier_metrics.json",
-    "include_background": true,
-    "cls_only": false
+    "out": "C:\\Users\\wecal\\Documents\\Codes\\opencv-visionguard\\eval\\classifier_metrics.json"
   }
 }
