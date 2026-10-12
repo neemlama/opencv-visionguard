@@ -1,0 +1,81 @@
+{
+  "dataset": "NEU-DET",
+  "iou_threshold": 0.5,
+  "split": {
+    "method": "per-class interleaved: even index=tune, odd index=report",
+    "tune_per_class": 60,
+    "report_per_class": 150,
+    "group_overlap": 0
+  },
+  "proposal_config": {
+    "blur_sizes": [
+      21,
+      31,
+      51
+    ],
+    "thresholds": [
+      8.0,
+      18.0,
+      36.0
+    ],
+    "close_k": 5,
+    "min_area": 20,
+    "max_frac": 0.95
+  },
+  "selected_scorer": {
+    "w_energy": 0.0,
+    "w_agree": 1.0,
+    "w_compact": 0.0,
+    "w_share": 2.0,
+    "w_contrast": 0.0,
+    "nms_iou": 0.5,
+    "top_k": 3,
+    "score_thresh": 0.2
+  },
+  "tune_macro_f1": 0.191,
+  "holdout": {
+    "macro_f1": 0.1839,
+    "pooled_f1": 0.1801,
+    "precision": 0.1587,
+    "recall": 0.2083,
+    "tp": 428,
+    "fp": 2269,
+    "fn": 1627,
+    "per_class": {
+      "crazing": {
+        "precision": 0.0511,
+        "recall": 0.0671,
+        "f1": 0.058
+      },
+      "inclusion": {
+        "precision": 0.2321,
+        "recall": 0.2413,
+        "f1": 0.2366
+      },
+      "patches": {
+        "precision": 0.0467,
+        "recall": 0.0495,
+        "f1": 0.0481
+      },
+      "pitted_surface": {
+        "precision": 0.1822,
+        "recall": 0.3475,
+        "f1": 0.2391
+      },
+      "rolled-in_scale": {
+        "precision": 0.1311,
+        "recall": 0.1897,
+        "f1": 0.1551
+      },
+      "scratches": {
+        "precision": 0.3096,
+        "recall": 0.4484,
+        "f1": 0.3663
+      }
+    }
+  },
+  "oracle": {
+    "recall_at_iou": 0.3455,
+    "gt_boxes": 2055
+  }
+}

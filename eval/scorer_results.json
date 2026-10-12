@@ -1,0 +1,93 @@
+{
+  "dataset": "NEU-DET",
+  "iou_threshold": 0.5,
+  "scorer_features": [
+    "energy",
+    "agree",
+    "compact",
+    "share",
+    "contrast",
+    "n_scales",
+    "log_w",
+    "log_h",
+    "log_area",
+    "log_aspect",
+    "area_frac",
+    "offx",
+    "offy",
+    "share_rank",
+    "energy_rank"
+  ],
+  "scorer_len": 15,
+  "split": {
+    "tune_per_class": 120,
+    "report_per_class": 200,
+    "overlap": 0,
+    "note": "labels from TUNE only; all reported numbers from REPORT"
+  },
+  "tune_candidates": 53845,
+  "tune_positive_rate": 0.0254,
+  "pos_weight": 1.0,
+  "feature_weights": {
+    "energy": -0.0022,
+    "agree": 0.1026,
+    "compact": -0.3843,
+    "share": 0.1667,
+    "contrast": 0.4789,
+    "n_scales": 0.1026,
+    "log_w": 0.6242,
+    "log_h": 0.6467,
+    "log_area": 0.7093,
+    "log_aspect": -0.0697,
+    "area_frac": -0.5278,
+    "offx": 0.0383,
+    "offy": -0.034,
+    "share_rank": -0.0555,
+    "energy_rank": -0.2353
+  },
+  "holdout_score_thresh": 0.1,
+  "score_thresh_selected_on": "TUNE validation slice (every 4th TUNE image, stride 3)",
+  "holdout": {
+    "macro_f1": 0.2191,
+    "pooled_f1": 0.2235,
+    "precision": 0.2387,
+    "recall": 0.2102,
+    "tp": 432,
+    "fp": 1378,
+    "fn": 1623,
+    "per_class": {
+      "crazing": {
+        "precision": 0.0857,
+        "recall": 0.0612,
+        "f1": 0.0714
+      },
+      "inclusion": {
+        "precision": 0.3719,
+        "recall": 0.2459,
+        "f1": 0.2961
+      },
+      "patches": {
+        "precision": 0.0526,
+        "recall": 0.0448,
+        "f1": 0.0484
+      },
+      "pitted_surface": {
+        "precision": 0.2931,
+        "recall": 0.2161,
+        "f1": 0.2488
+      },
+      "rolled-in_scale": {
+        "precision": 0.1873,
+        "recall": 0.1704,
+        "f1": 0.1785
+      },
+      "scratches": {
+        "precision": 0.3939,
+        "recall": 0.5871,
+        "f1": 0.4715
+      }
+    }
+  },
+  "oracle_recall_on_report": 0.3455,
+  "scorer_fraction_of_oracle": 0.6084
+}

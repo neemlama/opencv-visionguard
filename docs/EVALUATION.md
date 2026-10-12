@@ -11,10 +11,14 @@ python eval\train_classifier.py --include-background   # accuracy + confusion ma
 python eval\triage_eval.py                             # operating point + calibration
 python eval\neu_eval.py --limit 100                    # localisation, IoU per class
 python eval\demo_loop.py                               # closed-loop traces
+
+# Localisation rebuild (2026-10-12): disjoint TUNE/REPORT splits
+python eval\localize_compare.py --tune-limit 60 --report-limit 150   # single vs multi
+python eval\train_scorer.py --tune-limit 120 --report-limit 200      # learned scorer
 ```
 
 Raw output: `eval/classifier_metrics.json`, `eval/triage_calibration.json`,
-`eval/neu_results.json`.
+`eval/neu_results.json`, `eval/localize_compare.json`, `eval/scorer_results.json`.
 
 ---
 
@@ -26,7 +30,7 @@ Three questions that fail differently:
 |---|---|---|
 | **classification** | which defect is this? | **92.75%** held-out accuracy, macro F1 0.927 |
 | **triage** | should a person look at it? | **0 missed defects**, auto-pass precision **1.000** |
-| **localisation** | where is it? | **macro F1 ~0.19** at IoU 0.5 — weak, stated plainly |
+| **localisation** | where is it? | **macro F1 0.219** at IoU 0.5 on a disjoint hold-out — improved but still weak, stated plainly |
 
 Localisation is reported separately precisely because it is the weakest part.
 Pooling it with classification would hide that.
@@ -86,6 +90,26 @@ construction.
 |---|---|
 | before scaling | 0.0886 |
 | after scaling (T = 0.75, fitted on val) | **0.0361** |
+
+### Leak 3 — localisation was tuned on the images it was reported on
+
+Found on 2026-10-12 while rebuilding the localiser, and it applies to the
+previously published localisation numbers only (classification, triage and the
+agent ablation were already split correctly).
+
+`eval/neu_tune.py` grid-searched 180 configs over `load_subset(40)` — the **first
+40 images per class in sorted filename order** — and `eval/neu_eval.py` reported
+on those same first-40 images. The search set and the report set were identical.
+
+**Fix** (`eval/localize_eval.py`, `eval/localize_compare.py`, `eval/train_scorer.py`):
+per-class **interleaved** disjoint halves — even index to TUNE, odd index to
+REPORT — so every hyper-parameter, weight, `pos_weight` and operating threshold
+is chosen on TUNE and the REPORT split is read once. Interleaving rather than a
+head/tail cut avoids coupling the split to filename order, which groups by class
+prefix.
+
+**Effect on the headline: 0.188 → 0.1855.** The leak was worth little in itself,
+but the old number was not defensible and this one is.
 
 ---
 
@@ -319,31 +343,118 @@ open methodological weakness rather than claiming it resolved.
 
 ---
 
-## 4. Localisation — the weak part
+## 4. Localisation — rebuilt, still the weak part
 
 Box-level detection against NEU-DET ground truth, greedy IoU matching at 0.5.
+All numbers below are on a **disjoint 900-image REPORT split** that is used for
+nothing else (see Leak 3).
 
-| class | precision | recall | F1 | detected @IoU 0.3 |
-|---|---|---|---|---|
-| crazing | 0.010 | 0.081 | 0.017 | 0.600 |
-| inclusion | 0.113 | 0.072 | 0.088 | 0.360 |
-| patches | 0.011 | 0.038 | 0.017 | 0.400 |
-| pitted_surface | 0.032 | 0.078 | 0.045 | 0.220 |
-| rolled-in_scale | 0.000 | 0.000 | 0.000 | 0.000 |
-| scratches | 0.245 | 0.313 | 0.275 | 0.940 |
+### 4a. The first question is not "how good is it" but "how good could it be"
 
-**macro F1 0.075 hand-picked, 0.188 after grid search** (180 configs over
-`box`, `anom_thresh`, `min_area`, `close_k`).
+Before changing anything we measured the **oracle**: keep *every* candidate
+component and hand-pick the best subset. Any scorer is bounded by it.
 
-Why it is weak: NEU defects are diffuse and frequently span most of the frame
-(`crazing_1` is annotated 2,2–193,194). A merged connected-component box cannot
-reach IoU 0.5 against such an annotation, and `rolled-in_scale` has no box
-annotation at all in the files we parsed.
+| proposal generator | oracle recall @IoU0.5 |
+|---|---|
+| single-scale, as previously shipped (`neu.py`) | **0.082** |
+| multi-scale, union over 21 (blur, threshold) pairs | **0.476** |
 
-**We did not paper over this.** The classifier carries the decision; localisation
-supplies a coarse pointer and, more usefully, an *independent* signal — when the
-classifier says clean but localisation finds structure, the agent refuses to
-auto-pass. That disagreement rule is in `backend/app/agent.py`.
+The single-scale oracle of 0.082 is the finding that mattered. It is *below* the
+0.188 we had been publishing, which means **no scorer could ever have reached
+that number** — the 0.188 was an artefact of the leak in Leak 3, not a result.
+Threshold tuning could not have fixed it, and no amount of further tuning would.
+
+### 4b. What the diagnosis actually found
+
+We had assumed, and the old document asserted, that NEU defects are simply too
+diffuse to box. Measurement contradicts most of that:
+
+| claim | measurement |
+|---|---|
+| defects span most of the frame | across all 4189 GT boxes the median area is **11.8%** of the frame, p90 = 37.9%; only 264 boxes exceed 50% and 117 exceed 80% |
+| annotations overlap, so one blob cannot match | GT sibling boxes barely touch: mean pairwise IoU **0.015**, only 0.1% exceed 0.5. NEU annotates **2.32 genuinely separate defects per image** |
+| our components are hollow shells that need filling | hole-filling and convex hull changed the oracle **not at all** (0.082 either way) — the components were already solid |
+
+The real fault was ours, and it was measurable: **88% of predicted boxes were more
+than 2x too large**, median **7.3x in area** (~2.7x linear). NEU-DET images
+averaged 21.9 components against 2.32 true defects. Shrinking boxes toward their
+centres did not help (oracle stayed ~0.08), so it was over-merging, not
+over-scaling.
+
+### 4c. What was built
+
+`backend/app/localize.py`. Propose at 9 (blur, threshold) combinations rather
+than one, then select. Two scorers were measured:
+
+| arm | macro F1 | precision | recall |
+|---|---|---|---|
+| single-scale, 540 configs tuned on TUNE (`eval/localize_compare.py`) | 0.1855 | 0.259 | 0.151 |
+| multi-scale, **unsupervised** hand-weighted score | 0.1839 | 0.159 | 0.208 |
+| multi-scale, **learned** scorer (`eval/train_scorer.py`) | **0.2191** | 0.239 | 0.210 |
+
+The middle row is a **negative result we are reporting rather than hiding**: the
+multi-scale proposal space has a 4x higher ceiling, and a hand-weighted score
+could not exploit any of it (−0.0016, i.e. nothing). Choosing one good box out
+of ~78 needs supervision. A 15-feature binary logistic regression trained on the
+TUNE split only recovers part of it: **+0.034 macro F1, +18% relative**, with
+precision *and* recall both matching or beating single-scale.
+
+Per class, held out:
+
+| class | precision | recall | F1 |
+|---|---|---|---|
+| scratches | 0.394 | 0.587 | **0.471** |
+| inclusion | 0.372 | 0.246 | **0.296** |
+| pitted_surface | 0.293 | 0.216 | **0.249** |
+| rolled-in_scale | 0.187 | 0.170 | **0.178** |
+| crazing | 0.086 | 0.061 | **0.071** |
+| patches | 0.053 | 0.045 | **0.048** |
+
+The learned features are interpretable and match the diagnosis: the strongest
+weights are on **box size** (`log_area` +0.71, `log_h` +0.65, `log_w` +0.62) and
+**`area_frac` is negative** (−0.53) — the scorer learned to prefer smaller boxes,
+which is exactly the 7.3x over-sizing fault we measured. An unsupervised score
+had no way to express that.
+
+### 4d. What is still wrong, stated plainly
+
+- **macro F1 0.219 is still weak.** It is a real improvement on an honest
+  baseline, not a good detector. `crazing` (0.071) and `patches` (0.048) are
+  barely above zero.
+- **The proposal generator is now the bottleneck, not the scorer.** Oracle
+  recall on the same split is **0.3455**; the scorer reaches 0.2102, capturing
+  **60.8%** of what the proposals allow. Its validation AUC is 0.978, so it ranks
+  candidates almost perfectly — there is little left for a better scorer to win.
+  Closing the remaining gap needs better proposals, not a better score.
+- **Not wired into the agent, deliberately.** `backend/app/analysis.py` and
+  `backend/app/agent.py` still call the old `localize()`, so shipped behaviour
+  and reported behaviour are identical. This is a decision, not an oversight,
+  and the reason is a safety one that reading the code makes obvious:
+
+  ```python
+  # backend/app/agent.py:131
+  if pred["defect_class"] == "no_defect" and pred["confidence"] >= PASS_MIN:
+      if loc["region_count"] > 0:      # structure found -> refuse to auto-pass
+  ```
+
+  The disagreement veto keys on the **raw count** of anomaly regions, not on
+  their quality. That makes it a *sensitivity* mechanism: any structure at all
+  blocks the pass. The rebuilt localiser is built the opposite way — it
+  suppresses to `top_k=4` and applies a score threshold, deliberately emitting
+  **fewer, tighter, higher-precision** boxes (0.186 → 0.239 precision).
+
+  A precision-oriented detector placed behind a sensitivity veto makes the agent
+  *more* willing to auto-pass, which is the exact direction in which this system
+  has already shipped one real safety bug (200/200 false accepts under noise,
+  §4a). Swapping it in would need `eval/agent_ablation.py` re-run with
+  `false accepts` as a release gate, not just an F1 comparison. We did not
+  change a safety path on the strength of an F1 delta 14 days from the deadline.
+
+  If this is ever revisited, the correct fix is to make the veto key on
+  *localiser confidence* rather than `region_count > 0`, so a better detector
+  tightens the boxes without silently loosening the veto.
+- **crazing remains near-unsolved** and is the honest weak class. Its oracle
+  recall is only 0.136 — the proposal space itself cannot represent it.
 
 ---
 
@@ -351,8 +462,8 @@ auto-pass. That disagreement rule is in `backend/app/agent.py`.
 
 | limitation | cause | severity |
 |---|---|---|
-| **Localisation F1 ~0.19** | diffuse defects vs merged-box annotation; `rolled-in_scale` unannotated | high — reported, not hidden |
-| **`no_defect` recall 0.728** | only 269 background crops exist (most NEU frames are annotated almost end-to-end), and boxes are imperfect so some crops contain unannotated defect | high — the weakest class |
+| **Localisation F1 0.219** | proposal oracle recall is only 0.346, so no detector can exceed it; crazing (0.071) and patches (0.048) are barely above zero | high — reported, not hidden |
+| **`no_defect` recall 0.790** | only 269 background crops exist (most NEU frames are annotated almost end-to-end), and boxes are imperfect so some crops contain unannotated defect | high — the weakest class |
 | `inclusion` ↔ `pitted_surface` / `scratches` | thin low-contrast streaks are near-identical at 200x200 | medium |
 | No video, no camera geometry | static 200x200 crops only | medium |
 | No mill tolerance model | outputs a defect class and a region, not a pass/fail against a spec | medium |

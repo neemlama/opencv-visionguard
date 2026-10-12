@@ -23,7 +23,7 @@ command that reproduces it.
 | C9 | COOL vs stock OpenCV 5, library-only | **0.94x — COOL slower** | `bench/results/comparison-us-east-1.json` |
 | C10 | Graviton price per vCPU vs Intel | **11% cheaper** | `bench/instance_pricing.json` |
 | C11 | Gabor bank 16→8 speedup | **1.83x** end-to-end on AWS, −0.33 acc pts | `docs/BENCHMARK-RESULTS.md` §2 |
-| C12 | Localisation macro F1 at IoU 0.5 | **~0.19 — weak** | `eval/neu_results.json` |
+| C12 | Localisation macro F1 at IoU 0.5 | **0.219 — weak**, disjoint hold-out; old ~0.19 withdrawn (Leak 3) | `eval/scorer_results.json` |
 | C13 | Live endpoint | verified on COOL AMI | `docs/DEPLOYMENT.md` |
 
 ---
@@ -197,18 +197,44 @@ then-current split. The same `(0,0)` also tries to allocate 1.8e19 bytes on the
 
 ### 4.4 Localisation — the weak component, stated plainly
 
-Box-level detection against ground truth, IoU 0.5, after a 180-config grid
-search, reaches **macro F1 ≈ 0.19**.
+Box-level detection against ground truth at IoU 0.5, reported once on a
+**disjoint 900-image hold-out**, reaches **macro F1 0.219**.
 
-NEU defects are diffuse: `crazing_1` is annotated 2,2–193,194, i.e. almost the
-whole frame. A merged connected-component box cannot reach IoU 0.5 against such
-an annotation, and `rolled-in_scale` has no box annotation in the files we
-parsed.
+An earlier version of this section claimed **≈ 0.19 after a 180-config grid
+search**. That number was measured on the same images the search ran on
+(Leak 3, `docs/EVALUATION.md` §1a) and is withdrawn. Re-run honestly, single-scale
+scores **0.1855** and the rebuilt multi-scale localiser with a learned scorer
+scores **0.2191**.
+
+The reason the old number looked reachable at all is that nobody measured the
+ceiling. The **oracle** — keep every candidate component, hand-pick the best
+subset — is **0.082** for the old single-scale detector, *below* the number we
+had been publishing. No scorer can beat its own proposal generator, so the 0.19
+was never real. Multi-scale proposals raise that oracle to 0.346, and the honest
+headline moves from 0.1855 to 0.2191.
+
+What was actually wrong was ours, not the dataset's: **88% of predicted boxes were
+over 2x too large** (median 7.3x in area) against GT boxes whose median area is
+11.8% of the frame. NEU annotates 2.32 well-separated defects per image
+(sibling-box IoU 0.015) — the old assumption that defects were diffuse and
+frame-filling is contradicted for 93% of boxes.
+
+Still true and still the honest position: **0.219 is weak.** The proposal
+generator's oracle is 0.346, so the detector cannot exceed it, and `crazing`
+(0.071) and `patches` (0.048) are barely above zero. The learned scorer reaches
+60.8% of what the proposals allow at validation AUC 0.978, which means the
+remaining headroom is in better proposals, not a better score.
 
 We therefore **do not use localisation to decide**. It supplies a coarse pointer
 and — more usefully — an independent signal: when the classifier says clean but
 the localiser finds structure, the agent refuses to auto-pass. A weak second
 opinion is still useful as a veto.
+
+The rebuilt localiser is **not yet wired into the agent**: `analysis.py` and
+`agent.py` still call the old detector, so shipped and reported behaviour are
+identical. Swapping it in requires re-running the ablation, because the
+disagreement check is a safety property and we do not change a safety path on the
+strength of an F1 delta.
 
 ---
 
@@ -439,7 +465,9 @@ The full log is `docs/CHALLENGES.md` (C-01 … C-17). The ones a judge should kn
 ### Open limitations
 
 1. **Simulator-derived robustness** (§1). The largest caveat in the project.
-2. **Localisation macro F1 ≈ 0.19.** Not used for decisions.
+2. **Localisation macro F1 0.219** (up from an honest 0.1855; the previously
+   published ~0.19 was measured on its own tuning set and is withdrawn). Still
+   weak, and capped by a 0.346 proposal oracle. Not used for decisions.
 3. **`no_defect` recall 0.790** from 269 crops; crops inherit annotation noise.
 4. **Glare detection does not work** and is disabled; 34/200 false accepts
    under the glare preset.

@@ -1,0 +1,115 @@
+{
+  "protocol": "both arms tuned on TUNE split, reported once on disjoint REPORT split",
+  "iou_threshold": 0.5,
+  "tune_per_class": 60,
+  "report_per_class": 150,
+  "split_overlap": 0,
+  "single_scale": {
+    "tune_macro_f1": 0.2073,
+    "config": {
+      "anom_thresh": 8.0,
+      "min_area": 400,
+      "box": 21,
+      "close_k": 9,
+      "open_k": 3,
+      "merge_iou": 0.3
+    },
+    "holdout": {
+      "macro_f1": 0.1855,
+      "pooled_f1": 0.1908,
+      "precision": 0.2594,
+      "recall": 0.1509,
+      "tp": 310,
+      "fp": 885,
+      "fn": 1745,
+      "per_class": {
+        "crazing": {
+          "precision": 0.0441,
+          "recall": 0.0175,
+          "f1": 0.0251
+        },
+        "inclusion": {
+          "precision": 0.5238,
+          "recall": 0.1276,
+          "f1": 0.2052
+        },
+        "patches": {
+          "precision": 0.0544,
+          "recall": 0.0189,
+          "f1": 0.028
+        },
+        "pitted_surface": {
+          "precision": 0.1289,
+          "recall": 0.1229,
+          "f1": 0.1258
+        },
+        "rolled-in_scale": {
+          "precision": 0.2417,
+          "recall": 0.2797,
+          "f1": 0.2593
+        },
+        "scratches": {
+          "precision": 0.5631,
+          "recall": 0.4032,
+          "f1": 0.4699
+        }
+      }
+    }
+  },
+  "multi_scale": {
+    "tune_macro_f1": 0.191,
+    "config": {
+      "w_energy": 0.0,
+      "w_agree": 1.0,
+      "w_compact": 0.0,
+      "w_share": 2.0,
+      "w_contrast": 0.0,
+      "nms_iou": 0.5,
+      "top_k": 3,
+      "score_thresh": 0.2
+    },
+    "holdout": {
+      "macro_f1": 0.1839,
+      "pooled_f1": 0.1801,
+      "precision": 0.1587,
+      "recall": 0.2083,
+      "tp": 428,
+      "fp": 2269,
+      "fn": 1627,
+      "per_class": {
+        "crazing": {
+          "precision": 0.0511,
+          "recall": 0.0671,
+          "f1": 0.058
+        },
+        "inclusion": {
+          "precision": 0.2321,
+          "recall": 0.2413,
+          "f1": 0.2366
+        },
+        "patches": {
+          "precision": 0.0467,
+          "recall": 0.0495,
+          "f1": 0.0481
+        },
+        "pitted_surface": {
+          "precision": 0.1822,
+          "recall": 0.3475,
+          "f1": 0.2391
+        },
+        "rolled-in_scale": {
+          "precision": 0.1311,
+          "recall": 0.1897,
+          "f1": 0.1551
+        },
+        "scratches": {
+          "precision": 0.3096,
+          "recall": 0.4484,
+          "f1": 0.3663
+        }
+      }
+    }
+  },
+  "delta_holdout_macro_f1": -0.0016,
+  "multi_scale_oracle_recall": 0.3455
+}
