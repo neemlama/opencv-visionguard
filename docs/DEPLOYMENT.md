@@ -83,23 +83,36 @@ Agentic Vision criterion being satisfied, and it is reproducible from the trace.
 
 ## Operating schedule and cost
 
-`c8g.medium` is $0.072/h. Always-on from now to the Oct 26 deadline would be
-~480 h ≈ **$34.6, which alone exceeds the $25 monthly cap.** So the endpoint is
-**on demand**:
+`c8g.medium` is **$0.03988/hr**, not the $0.072/hr we used to assume. The Price
+List API figure is $0.03988 and `docs/BENCHMARK-RESULTS.md` §2 retracted the
+0.072 number; this file had drifted and is corrected here. At the corrected rate:
+
+| window | hours | cost |
+|---|---|---|
+| now (Oct 12) → submission (Oct 26), continuous | 336 | **$13.40** |
+| judging (Oct 27) → Nov 9, continuous | 312 | **$12.44** |
+| now → Nov 9, continuous (the whole period) | 672 | **$26.80 — over the $25 cap** |
+
+So a continuously-alive endpoint is affordable up to submission but **not**
+through the full judging window. Recommended schedule:
 
 | phase | when | mode | cost |
 |---|---|---|---|
 | build | now – Oct 26 | on demand, short TTL | ~$0.10 total so far |
-| submission | Oct 26 | up for the video/screen-share | < $1 |
-| judging | Oct 27 – Nov 9 | up during judging hours | ~$5–10 |
+| submission | Oct 26 | **up for the video / screen-share** | < $1 |
+| judging | Oct 27 – Nov 9 | up during judging hours, down nightly | ~$5–10 |
 
-Judging-period start:
+One 10-hour judging day at the corrected rate is **$0.40**.
 
 ```powershell
-python aws\deploy_endpoint.py up --ttl-hours 10    # 10h, covers a judging day
-# or leave running and stop nightly:
-python aws\deploy_endpoint.py down
+aws login                                                    # session expires ~every few hours
+python aws\deploy_endpoint.py up --ttl-hours 10              # covers a judging day
+python aws\deploy_endpoint.py down                           # stop nightly
 ```
+
+Note that an **expired AWS session is the most likely cause of a failed
+submission-time deploy**, and it is silent until a call is made. Re-run
+`aws sts get-caller-identity` before relying on the endpoint.
 
 Cost so far for all AWS work (benchmark runs, probes, three endpoint deploys):
 **under $1**, against a `$25` cap with no alarm triggered.

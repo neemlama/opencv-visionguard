@@ -48,9 +48,10 @@ survey, so both are deduplicated and the split is grouped by source image
 | price per vCPU, Graviton vs Intel | Graviton $0.03988 vs Intel $0.04462 — **Graviton 11% cheaper** |
 | per-core throughput | 322 vs 330 fps/vCPU — within 2.4% |
 
-Two methodology leaks were found and fixed before any of these numbers were
-quoted: the dataset duplication, and a temperature fitted on the split used to
-report ECE. One safety failure was found by the ablation (196/200 false accepts
+Three methodology leaks were found and fixed before any of these numbers were
+quoted: the dataset duplication, a temperature fitted on the split used to
+report ECE, and a localisation grid search run on the same images it was
+reported on. One safety failure was found by the ablation (196/200 false accepts
 under noise) and fixed. All are documented rather than quietly corrected.
 
 ## The COOL finding, stated plainly
@@ -97,6 +98,7 @@ eligible when the live API runs pip OpenCV 5 rather than COOL. Draft email:
 | `backend/app/features.py` | OpenCV 5 descriptor: 8 Gabor, Sobel, blur/anomaly, Laplacian |
 | `backend/app/classifier.py` | NumPy logistic regression + temperature scaling |
 | `backend/app/analysis.py` | perception: quality gate, classification, localisation |
+| `backend/app/localize.py` | multi-scale proposal generator + learned proposal scorer |
 | `backend/app/agent.py` | decision loop, confidence bands, bounded retries |
 | `backend/app/capture.py` | capture-settings simulator (fixes change the render) |
 | `backend/app/model.npz` | trained weights + fitted temperature |
@@ -183,10 +185,12 @@ compile time; it is a documented gap, not an oversight.
 
 Stated up front, quantified in `docs/EVALUATION.md`:
 
-- **Localisation is weak** — box-level IoU 0.5 macro F1 ~0.19 even after grid
-  search. NEU defects are diffuse and often span the frame. The classifier carries
-  the decision; localisation is a pointer and a cross-check.
-- **`no_defect` recall is 0.728** and rests on only 269 background crops, because
+- **Localisation is weak** — box-level IoU 0.5 macro F1 **0.219** on a disjoint
+  hold-out, improved from 0.186 but still weak. The proposal generator's own
+  oracle recall is only 0.346, so no detector can currently exceed it; `crazing`
+  (0.071) and `patches` (0.048) are barely above zero. The classifier carries
+  the decision; localisation is a pointer and an independent cross-check.
+- **`no_defect` recall is 0.790** and rests on only 269 background crops, because
   most NEU frames have annotations covering nearly the whole image. This is the
   weakest part of the model.
 - `scratches` ↔ `inclusion` and `inclusion` ↔ `pitted_surface` are the dominant
@@ -203,6 +207,9 @@ Stated up front, quantified in `docs/EVALUATION.md`:
 - [x] 3-arm reproducible COOL benchmark on Graviton4
 - [x] failure cases and limitations documented (`docs/CHALLENGES.md`)
 - [x] closed capture loop (fix changes settings, scene re-rendered)
-- [ ] AWS-hosted demo endpoint
-- [ ] architecture diagram
-- [ ] technical report + <=5 min video
+- [x] AWS-hosted demo endpoint — deployed and verified on the COOL Graviton4 AMI,
+      `/health` reporting OpenCV 5.0.0 (`docs/DEPLOYMENT.md`). Held on-demand for
+      cost; `up` brings it back in ~3 min. **Must be up on submission day.**
+- [x] architecture diagram (`docs/architecture.png`, source `docs/architecture-eraser.json`)
+- [x] technical report (`docs/REPORT.md`)
+- [ ] <=5 min video — script, shot list and pre-flight in `docs/VIDEO-SCRIPT.md`
