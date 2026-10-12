@@ -1,0 +1,228 @@
+{
+  "entities": [
+    {
+      "tag": "Textbox",
+      "id": "title",
+      "x": 40,
+      "y": 10,
+      "width": 1480,
+      "text": "## ForgeSight — Agentic Visual Inspection of Rolled-Steel Defects (OpenCV 5 live, COOL benchmarked)"
+    },
+    {
+      "tag": "Group",
+      "id": "client",
+      "x": 40,
+      "y": 80,
+      "width": 280,
+      "height": 460,
+      "color": "blue",
+      "title": { "text": "Demo UI + Client" }
+    },
+    {
+      "tag": "Shape",
+      "id": "frontend",
+      "x": 70,
+      "y": 170,
+      "width": 220,
+      "height": 90,
+      "color": "blue",
+      "containerId": "client",
+      "texts": [{ "text": "Frontend + samples" }, { "text": "index.html, NEU samples", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Shape",
+      "id": "capture-in",
+      "x": 70,
+      "y": 310,
+      "width": 220,
+      "height": 90,
+      "color": "teal",
+      "containerId": "client",
+      "texts": [{ "text": "Steel capture in" }, { "text": "upload image", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Group",
+      "id": "api",
+      "x": 400,
+      "y": 80,
+      "width": 300,
+      "height": 460,
+      "color": "purple",
+      "title": { "text": "FastAPI Service" }
+    },
+    {
+      "tag": "Shape",
+      "id": "health",
+      "x": 430,
+      "y": 170,
+      "width": 240,
+      "height": 80,
+      "color": "green",
+      "containerId": "api",
+      "texts": [{ "text": "GET /health" }, { "text": "opencv 5.0.0", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Shape",
+      "id": "inspect",
+      "x": 430,
+      "y": 410,
+      "width": 240,
+      "height": 90,
+      "color": "purple",
+      "containerId": "api",
+      "texts": [{ "text": "POST /inspect" }, { "text": "single pass", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Shape",
+      "id": "loop-ep",
+      "x": 430,
+      "y": 290,
+      "width": 240,
+      "height": 90,
+      "color": "purple",
+      "containerId": "api",
+      "texts": [{ "text": "POST /inspect/loop" }, { "text": "max 6 steps", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Group",
+      "id": "perception",
+      "x": 780,
+      "y": 80,
+      "width": 320,
+      "height": 460,
+      "color": "green",
+      "title": { "text": "Perception (OpenCV 5)" }
+    },
+    {
+      "tag": "Shape",
+      "id": "quality",
+      "x": 810,
+      "y": 170,
+      "width": 260,
+      "height": 90,
+      "color": "green",
+      "containerId": "perception",
+      "texts": [{ "text": "Quality gate" }, { "text": "sharpness + noise", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Shape",
+      "id": "classifier",
+      "x": 810,
+      "y": 300,
+      "width": 260,
+      "height": 90,
+      "color": "green",
+      "containerId": "perception",
+      "texts": [{ "text": "Classifier + Localise" }, { "text": "Gabor8, 92.75%", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Shape",
+      "id": "capture-sim",
+      "x": 810,
+      "y": 420,
+      "width": 260,
+      "height": 80,
+      "color": "teal",
+      "containerId": "perception",
+      "texts": [{ "text": "Capture simulator" }, { "text": "fix re-renders scene", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Group",
+      "id": "agentg",
+      "x": 1180,
+      "y": 80,
+      "width": 340,
+      "height": 460,
+      "color": "orange",
+      "title": { "text": "Agent Loop + Human" }
+    },
+    {
+      "tag": "Shape",
+      "id": "decide",
+      "x": 1210,
+      "y": 170,
+      "width": 280,
+      "height": 90,
+      "color": "orange",
+      "containerId": "agentg",
+      "texts": [{ "text": "decide() bands" }, { "text": "0.55 / 0.80 / 0.85", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Shape",
+      "id": "outcomes",
+      "x": 1210,
+      "y": 300,
+      "width": 280,
+      "height": 100,
+      "color": "orange",
+      "containerId": "agentg",
+      "texts": [{ "text": "pass / review / escalate" }, { "text": "human approves work order", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Shape",
+      "id": "audit",
+      "x": 1210,
+      "y": 430,
+      "width": 280,
+      "height": 70,
+      "color": "blue",
+      "containerId": "agentg",
+      "texts": [{ "text": "Trace + audit" }, { "text": "every step logged", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Group",
+      "id": "aws",
+      "x": 40,
+      "y": 580,
+      "width": 1480,
+      "height": 170,
+      "color": "teal",
+      "title": { "text": "AWS us-east-1 — on-demand, $25 cap, <$1 spent" }
+    },
+    {
+      "tag": "Shape",
+      "id": "cool-bench",
+      "x": 70,
+      "y": 650,
+      "width": 440,
+      "height": 70,
+      "color": "teal",
+      "containerId": "aws",
+      "texts": [{ "text": "3-arm COOL bench 0.94x" }, { "text": "Gabor 1.00x, Canny 1.57x", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Shape",
+      "id": "endpoint",
+      "x": 550,
+      "y": 650,
+      "width": 440,
+      "height": 70,
+      "color": "green",
+      "containerId": "aws",
+      "texts": [{ "text": "Endpoint c8g.medium" }, { "text": "pip OpenCV 5, /opt/cool present", "color": "#6b7280" }]
+    },
+    {
+      "tag": "Shape",
+      "id": "data",
+      "x": 1030,
+      "y": 650,
+      "width": 440,
+      "height": 70,
+      "color": "blue",
+      "containerId": "aws",
+      "texts": [{ "text": "NEU 1800 deduped" }, { "text": "train 1138 / val 310 / test 621", "color": "#6b7280" }]
+    }
+  ],
+  "connections": [
+    { "from": "capture-in", "to": "inspect", "label": "upload" },
+    { "from": "frontend", "to": "loop-ep", "label": "demo" },
+    { "from": "inspect", "to": "quality", "label": "analyze" },
+    { "from": "loop-ep", "to": "quality", "label": "run_loop" },
+    { "from": "quality", "to": "classifier", "label": "usable" },
+    { "from": "quality", "to": "capture-sim", "label": "recapture" },
+    { "from": "capture-sim", "to": "quality", "label": "re-render" },
+    { "from": "classifier", "to": "decide", "label": "pred" },
+    { "from": "decide", "to": "outcomes", "label": "bands" },
+    { "from": "outcomes", "to": "audit", "label": "trace" }
+  ]
+}
