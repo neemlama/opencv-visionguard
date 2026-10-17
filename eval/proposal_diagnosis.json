@@ -1,0 +1,74 @@
+{
+  "split": "TUNE half only (even indices)",
+  "images_per_class": 20,
+  "proposal_config": {
+    "blur_sizes": [
+      21,
+      31,
+      51
+    ],
+    "thresholds": [
+      8.0,
+      18.0,
+      36.0
+    ],
+    "close_k": 5,
+    "min_area": 20,
+    "max_frac": 0.95
+  },
+  "iou_threshold": 0.5,
+  "refine_lo": 0.1,
+  "totals": {
+    "gt": 305,
+    "hit": 107,
+    "refine": 190,
+    "detect_fail": 8
+  },
+  "per_class": {
+    "crazing": {
+      "gt": 54,
+      "hit": 8,
+      "refine": 43,
+      "detect_fail": 3
+    },
+    "inclusion": {
+      "gt": 68,
+      "refine": 35,
+      "hit": 33,
+      "detect_fail": 0
+    },
+    "patches": {
+      "gt": 55,
+      "refine": 46,
+      "detect_fail": 1,
+      "hit": 8
+    },
+    "pitted_surface": {
+      "gt": 38,
+      "refine": 22,
+      "hit": 12,
+      "detect_fail": 4
+    },
+    "rolled-in_scale": {
+      "gt": 45,
+      "hit": 15,
+      "refine": 30,
+      "detect_fail": 0
+    },
+    "scratches": {
+      "gt": 45,
+      "hit": 31,
+      "refine": 14,
+      "detect_fail": 0
+    }
+  },
+  "gt_area_frac_percentiles": {
+    "5": 0.01486,
+    "25": 0.04868,
+    "50": 0.10887,
+    "75": 0.20075,
+    "95": 0.49668
+  },
+  "refine_area_ratio_median": 0.7571,
+  "hit_area_ratio_median": 1.0694
+}

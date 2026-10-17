@@ -46,17 +46,31 @@ def label_candidates(cands, gts, shape, iou_thresh):
     return y
 
 
-def evaluate(prepared, cfg, scorer, iou_thresh, score_thresh=0.0):
+def evaluate(prepared, cfg, scorer, iou_thresh, score_thresh=0.0, scores_by_img=None,
+             **overrides):
     per = defaultdict(lambda: dict(tp=0, fp=0, fn=0, gt=0))
-    for cls, cands, _stacked, gts, shape in prepared:
-        c = ProposalConfig(**{**cfg.__dict__, "score_thresh": score_thresh})
-        a, b, fn, _ = match(select(cands, c, scorer=scorer, shape=shape), gts, iou_thresh)
+    for i, (cls, cands, _stacked, gts, shape) in enumerate(prepared):
+        c = ProposalConfig(**{**cfg.__dict__, "score_thresh": score_thresh, **overrides})
+        sc = None if scores_by_img is None else scores_by_img.get(i)
+        a, b, fn, _ = match(
+            select(cands, c, scorer=sc if sc is not None else scorer, shape=shape,
+                   scores=None if scores_by_img is None else sc),
+            gts, iou_thresh)
         p = per[cls]
         p["tp"] += a
         p["fp"] += b
         p["fn"] += fn
         p["gt"] += fn
     return per
+
+
+def precompute_scores(prepared, scorer):
+    """One feature matrix + probability pass per image, reused across a sweep."""
+    out = {}
+    for i, (_cls, cands, _s, _gts, shape) in enumerate(prepared):
+        if cands:
+            out[i] = scorer.score(cands, shape)
+    return out
 
 
 def summarise(per):
@@ -88,8 +102,20 @@ def main():
     ap.add_argument("--report-limit", type=int, default=200)
     ap.add_argument("--iou", type=float, default=0.5)
     ap.add_argument("--epochs", type=int, default=600)
+    ap.add_argument("--min-area", type=int, default=20)
+    ap.add_argument("--variant-factors", default="",
+                    help="comma-separated nested box factors, e.g. '0.85,2.1'. "
+                         "Empty reproduces the pre-variant proposal pool.")
+    ap.add_argument("--skip-report", action="store_true",
+                    help="stop after the TUNE validation slice and never read the "
+                         "REPORT split. Use this to compare configs; the REPORT "
+                         "split is a once-only read.")
+    ap.add_argument("--scorer-npz", default="",
+                    help="where to save the scorer (default backend/app/scorer.npz)")
     ap.add_argument("--out", default=str(ROOT / "eval" / "scorer_results.json"))
     args = ap.parse_args()
+
+    factors = tuple(float(v) for v in args.variant_factors.split(",") if v.strip())
 
     by_class = build_index()
     tune_idx, rep_idx = {}, {}
@@ -102,7 +128,8 @@ def main():
     print(f"TUNE total={sum(len(v) for v in tune_idx.values())}  "
           f"REPORT total={sum(len(v) for v in rep_idx.values())}  overlap={len(overlap)}")
 
-    pcfg = ProposalConfig(min_area=20)
+    pcfg = ProposalConfig(min_area=args.min_area, variant_factors=factors)
+    print(f"proposal pool: variants={list(factors) or 'none (pre-variant pool)'}")
     t0 = time.time()
 
     import cv2
@@ -174,9 +201,13 @@ def main():
             best = (val_recall_at_rank, pw, W, b, mu, sd)
     _, pw_best, W, b, mu, sd = best
     scorer = ProposalScorer(W, b, mu, sd)
-    scorer.save()
-    print(f"\nchosen pos_weight={pw_best} (on the TUNE validation slice)")
-    print("saved scorer -> backend/app/scorer.npz")
+    if args.skip_report:
+        print(f"\nchosen pos_weight={pw_best} (on the TUNE validation slice)")
+        print("--skip-report: scorer NOT saved and the REPORT split NOT read")
+    else:
+        scorer.save(args.scorer_npz) if args.scorer_npz else scorer.save()
+        print(f"\nchosen pos_weight={pw_best} (on the TUNE validation slice)")
+        print(f"saved scorer -> {args.scorer_npz or 'backend/app/scorer.npz'}")
 
     # Learn per-feature sign for the write-up.
     print(f"\n{'feature':<14}{'weight':>10}")
@@ -186,21 +217,88 @@ def main():
     # Operating threshold is chosen on the TUNE validation slice too. Selecting
     # it on REPORT and then quoting REPORT would be Leak 3 all over again in a
     # new place, so the REPORT split below is read exactly once.
-    print("\nscore_thresh sweep on the TUNE validation slice:")
+    print("\nscore_thresh x top_k x nms_iou sweep on the TUNE validation slice:")
     val_prepared = [tune_prepared[i] for i in sorted(val_imgs)]
-    best_th, best_th_f1 = 0.0, -1.0
-    for th in (0.0, 0.05, 0.1, 0.2, 0.3, 0.5):
-        s = summarise(evaluate(val_prepared, pcfg, scorer, args.iou, th))
-        print(f"  thresh={th:<5} macroF1={s['macro_f1']:.4f}")
-        if s["macro_f1"] > best_th_f1:
-            best_th_f1, best_th = s["macro_f1"], th
-    th = best_th
-    print(f"selected score_thresh={th} on TUNE-validation (macroF1={best_th_f1:.4f})")
+    val_scores = precompute_scores(val_prepared, scorer)
+    best_op, best_th_f1, best_th = (0.0, 4, 0.40), -1.0, 0.0
+    for tk in (1, 2, 3, 4, 6):
+        for nms in (0.3, 0.4, 0.5):
+            for th in (0.0, 0.1, 0.2, 0.3, 0.5):
+                s = summarise(evaluate(val_prepared, pcfg, scorer, args.iou, th,
+                                      scores_by_img=val_scores,
+                                      top_k=tk, nms_iou=nms))
+                if s["macro_f1"] > best_th_f1:
+                    best_th_f1, best_op = s["macro_f1"], (th, tk, nms)
+    th, sel_top_k, sel_nms = best_op
+    print(f"  best: score_thresh={th} top_k={sel_top_k} nms_iou={sel_nms} "
+          f"-> macroF1={best_th_f1:.4f}")
+    print(f"  (top 6 of the grid)")
+    grid = []
+    for tk in (1, 2, 3, 4, 6):
+        for nms in (0.3, 0.4, 0.5):
+            for th_ in (0.0, 0.1, 0.2, 0.3, 0.5):
+                s = summarise(evaluate(val_prepared, pcfg, scorer, args.iou, th_,
+                                      scores_by_img=val_scores,
+                                      top_k=tk, nms_iou=nms))
+                grid.append((s["macro_f1"], s["precision"], s["recall"], th_, tk, nms))
+    grid.sort(reverse=True)
+    for f1, pr, rc, th_, tk, nms in grid[:6]:
+        print(f"    th={th_:<5} top_k={tk:<2} nms={nms:<4} macroF1={f1:.4f} "
+              f"P={pr:.3f} R={rc:.3f}")
+    print(f"selected score_thresh={th} top_k={sel_top_k} nms_iou={sel_nms} "
+          f"on TUNE-validation (macroF1={best_th_f1:.4f})")
+
+    if args.skip_report:
+        from backend.app.localize import _box_iou_vector as _biv
+        orc_h = orc_t = 0
+        for _cls, cands, _s, gts, _shape in val_prepared:
+            boxes = np.array([c.as_box() for c in cands], dtype=np.int32) \
+                if cands else np.zeros((0, 4), np.int32)
+            for g in gts:
+                orc_t += 1
+                if len(boxes) and float(_biv(boxes, (g.x, g.y, g.w, g.h)).max()) >= args.iou:
+                    orc_h += 1
+        orc = orc_h / max(1, orc_t)
+        val = summarise(evaluate(val_prepared, pcfg, scorer, args.iou, th,
+                                 scores_by_img=val_scores,
+                                 top_k=sel_top_k, nms_iou=sel_nms))
+        print(f"\n--- TUNE VALIDATION ONLY ({len(val_prepared)} images, "
+              f"{orc_t} GT boxes) ---")
+        print(f"macro F1={val['macro_f1']:.4f}  P={val['precision']:.3f} "
+              f"R={val['recall']:.3f}  pooledF1={val['pooled_f1']:.4f}")
+        print(f"oracle recall on this slice = {orc:.4f}")
+        print(f"scorer captured {val['recall'] / orc * 100:.1f}% of oracle" if orc else "")
+        print(f"\n{'class':<18}{'P':>8}{'R':>8}{'F1':>8}")
+        for cls in CLASSES:
+            v = val["per_class"].get(cls)
+            if v:
+                print(f"{cls:<18}{v['precision']:>8.3f}{v['recall']:>8.3f}{v['f1']:>8.3f}")
+        Path(args.out).write_text(json.dumps({
+            "mode": "skip-report (TUNE validation only; REPORT split untouched)",
+            "variant_factors": list(factors),
+            "scorer_len": SCORER_LEN,
+            "split": {"tune_per_class": args.tune_limit,
+                      "overlap": len(overlap),
+                      "note": "TUNE only - REPORT never read in this run"},
+            "tune_candidates": int(len(y)),
+            "tune_positive_rate": round(float(y.mean()), 4),
+            "pos_weight": pw_best,
+            "feature_weights": {n: round(float(w), 4)
+                                for n, w in zip(SCORER_FEATURES, W)},
+            "holdout_score_thresh": th,
+            "holdout_top_k": sel_top_k,
+            "holdout_nms_iou": sel_nms,
+            "tune_validation": val,
+            "tune_validation_oracle_recall": round(orc, 4),
+        }, indent=2))
+        print(f"\nwrote {args.out}")
+        return
 
     print(f"\n--- REPORTING ON DISJOINT HOLD-OUT ({sum(len(v) for v in rep_idx.values())} images) ---")
     Xr, yr, rep_prepared = prepare_labelled(rep_idx)
     print(f"REPORT candidates: {len(yr)} positive: {int(yr.sum())} ({yr.mean()*100:.2f}%)")
-    rep = summarise(evaluate(rep_prepared, pcfg, scorer, args.iou, th))
+    rep = summarise(evaluate(rep_prepared, pcfg, scorer, args.iou, th,
+                         top_k=sel_top_k, nms_iou=sel_nms))
     print(f"held-out macro F1={rep['macro_f1']:.4f}  P={rep['precision']:.3f} "
           f"R={rep['recall']:.3f} pooledF1={rep['pooled_f1']:.4f}")
     print(f"\n{'class':<18}{'P':>8}{'R':>8}{'F1':>8}")
@@ -242,6 +340,9 @@ def main():
         "pos_weight": pw_best,
         "feature_weights": {n: round(float(w), 4) for n, w in zip(SCORER_FEATURES, W)},
         "holdout_score_thresh": th,
+        "holdout_top_k": sel_top_k,
+        "holdout_nms_iou": sel_nms,
+        "variant_factors": list(factors),
         "score_thresh_selected_on": "TUNE validation slice (every 4th TUNE image, stride 3)",
         "holdout": rep,
         "oracle_recall_on_report": orc,

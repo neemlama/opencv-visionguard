@@ -1,0 +1,36 @@
+{
+  "split": "TUNE half only (even indices)",
+  "images_per_class": 20,
+  "iou_threshold": 0.5,
+  "factors": [
+    0.7,
+    0.85,
+    1.0,
+    1.3,
+    1.7,
+    2.1
+  ],
+  "gt_boxes": 305,
+  "oracle_recall": {
+    "base": 0.3508,
+    "contrast": 0.318,
+    "inside_mean": 0.2689,
+    "mass_over_sqrt_area": 0.3541,
+    "base_plus_contrast": 0.3934
+  },
+  "mean_boxes_per_image": {
+    "base": 80.2,
+    "contrast": 79.2,
+    "inside_mean": 79.4,
+    "mass_over_sqrt_area": 79.7,
+    "base_plus_contrast": 148.9
+  },
+  "contrast_factor_histogram": {
+    "0.7": 3477,
+    "0.85": 2697,
+    "1.0": 2724,
+    "1.3": 375,
+    "1.7": 177,
+    "2.1": 172
+  }
+}

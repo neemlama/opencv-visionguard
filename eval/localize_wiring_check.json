@@ -1,0 +1,71 @@
+{
+  "clean": {
+    "old": {
+      "finals": {
+        "human-review": 7,
+        "pass": 6
+      },
+      "vetoes": 0,
+      "mean_region_count": 0.077,
+      "ms_per_image": 3.51
+    },
+    "new": {
+      "finals": {
+        "human-review": 7,
+        "pass": 6
+      },
+      "vetoes": 0,
+      "mean_region_count": 0.154,
+      "ms_per_image": 12.33
+    }
+  },
+  "defect": {
+    "old": {
+      "finals": {
+        "human-review": 100,
+        "pass": 1,
+        "escalate-human": 18,
+        "re-capture": 1
+      },
+      "vetoes": 0,
+      "mean_region_count": 0.608,
+      "ms_per_image": 7.14
+    },
+    "new": {
+      "finals": {
+        "human-review": 101,
+        "escalate-human": 18,
+        "re-capture": 1
+      },
+      "vetoes": 1,
+      "mean_region_count": 1.833,
+      "ms_per_image": 59.86
+    }
+  },
+  "latency_by_class": {
+    "crazing": {
+      "old_ms": 16.68,
+      "new_ms": 72.32
+    },
+    "inclusion": {
+      "old_ms": 23.88,
+      "new_ms": 45.1
+    },
+    "patches": {
+      "old_ms": 23.64,
+      "new_ms": 57.23
+    },
+    "pitted_surface": {
+      "old_ms": 14.07,
+      "new_ms": 59.56
+    },
+    "rolled-in_scale": {
+      "old_ms": 16.13,
+      "new_ms": 71.58
+    },
+    "scratches": {
+      "old_ms": 23.98,
+      "new_ms": 48.82
+    }
+  }
+}

@@ -122,15 +122,21 @@ Then, briefly, the retraction — this is what separates an honest submission:
 
 Never end on your best number. State the real limit.
 
-> "Localisation is the weak part and we won't pretend otherwise: macro F1 0.219.
-> The honest reason is a ceiling — our proposal generator's own oracle recall is
-> 0.346, so no detector built on it can do better. The previous number, 0.19, was
-> tuned on the same images it was reported on. We found that, fixed it, and
-> withdrew the claim.
+> "Localisation is the weak part: macro F1 0.2247. We found that 62% of the boxes
+> we missed were the right defect at the wrong *size* — not defects we failed to
+> see — so we raised our proposal ceiling from 0.35 to 0.55. Macro F1 moved
+> 0.2200 to 0.2247. We could have quoted the 58% ceiling gain. We didn't, because
+> the score is what matters and the score barely moved.
 >
-> `no_defect` rests on only 269 clean crops. Glare detection doesn't work and is
-> disabled. There's no LLM planner here — it's a transparent, measured gate,
-> because we can defend that and we can't defend a reasoning chain."
+> The old 0.19 was tuned on the images it was reported on. We found that and
+> withdrew it. `no_defect` rests on 269 clean crops, glare detection doesn't work
+> and is off, and there's no LLM planner — it's a measured gate, because we can
+> defend that."
+
+**Timing note (2026-10-17):** this beat grew when the localisation numbers
+changed. It now runs ~45 s against a 35 s slot. Either drop the last paragraph to
+a single line ("Two things are still weak, and we list both in the report") or
+borrow ~10 s from the COOL section at 3:20. Re-time on the recording pass.
 
 ---
 

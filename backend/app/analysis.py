@@ -21,7 +21,8 @@ import cv2
 import numpy as np
 
 from .classifier import DefectClassifier
-from .features import (CLASS_NAMES, anomaly_map, describe, quality_metrics)
+from .features import CLASS_NAMES, describe, quality_metrics
+from .localize import ProposalConfig, ProposalScorer, localize_ex
 
 # Classes that justify stopping the line rather than queueing for review.
 SEVERE_CLASSES = ("inclusion", "rolled-in_scale", "pitted_surface")
@@ -53,6 +54,14 @@ CRUSHED_MAX = 0.05          # never fires on real data
 
 _MODEL = None
 
+# Localisation operating point. Selected on the TUNE validation slice by
+# eval/train_scorer.py (which sweeps score_thresh x top_k x nms_iou together) and
+# reported once on the disjoint REPORT split. Hard-coded here so the request path
+# cannot silently drift from the configuration the report describes.
+LOCALIZE_CONFIG = ProposalConfig(variant_factors=(0.85, 2.1), top_k=2,
+                                 nms_iou=0.3, score_thresh=0.3)
+_SCORER = None
+
 
 def get_model():
     global _MODEL
@@ -61,42 +70,55 @@ def get_model():
     return _MODEL
 
 
-def localize(gray, anom_thresh=8.0, min_area=400, close_k=9, box=21):
-    """Connected components on the anomaly map -> candidate defect regions.
+def get_scorer():
+    """Cached trained proposal scorer. `ProposalScorer.load` raises if
+    backend/app/scorer.npz is missing or was trained on a different feature
+    count, which is deliberate - a silently-wrong localiser would be worse than
+    a loud one."""
+    global _SCORER
+    if _SCORER is None:
+        _SCORER = ProposalScorer.load()
+    return _SCORER
 
-    Defaults come from eval/neu_tune.py (grid over box/anom_thresh/min_area/
-    close_k on 240 labelled images): box=21, anom_thresh=8, min_area=400,
-    close_k=9 was the best-scoring combination found.
 
-    Honest caveat: even tuned, box-level localisation on NEU is weak (macro F1
-    ~0.19 at IoU 0.5) because these defects are diffuse and often cover most of
-    the frame. The classifier carries the "which defect" decision; this stage
+def localize(gray, cfg=None, scorer=None):
+    """Multi-scale proposal + learned scorer -> ranked candidate defect regions.
+
+    Replaces the single-threshold connected-component version that lived here
+    until 2026-10-17. That version was still the live path while
+    `backend/app/localize.py` - the module the report's 0.219 localisation
+    number was measured on - sat unimported, so the reported number described
+    code that never ran on a request. This wires the measured module in.
+
+    Operating point (`variant_factors`, `top_k`, `nms_iou`, `score_thresh`) is
+    the one selected on the TUNE validation slice by eval/train_scorer.py and
+    reported once on the disjoint REPORT split: macro F1 0.2200 -> 0.2247, with
+    the proposal oracle rising 0.346 -> 0.546.
+
+    Measured cost of wiring it in, stated because it is a real regression:
+    localisation 0.64 -> 15.3 ms per image (24x), so `analyze()` goes from 8.4 to
+    ~23 ms per image. The cause is structural - 9 (blur x threshold) passes of
+    blur+threshold+morphology+connectedComponents instead of one. We took it
+    anyway: 23 ms per 200x200 crop is ~43 img/s, well above what a single
+    inspection camera needs, and the alternative was a report whose headline
+    localisation number did not describe the running system.
+
+    Honest caveat, unchanged by the rewrite: box-level localisation on NEU is
+    still weak. The classifier carries the "which defect" decision; this stage
     supplies a coarse pointer and, more importantly, an independent signal used
     to catch classifier/localiser disagreement.
     """
-    anom = anomaly_map(gray, box)
-    # Threshold a float32 map and it stays float32, but connectedComponentsWithStats
-    # asserts CV_8U/CV_8S. Threshold to 0/1 then scale to a real mask.
-    _, binary = cv2.threshold(anom, anom_thresh, 1.0, cv2.THRESH_BINARY)
-    mask = (binary * 255).astype(np.uint8)
-    if close_k:
-        mask = cv2.morphologyEx(
-            mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (close_k, close_k)))
-    n, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
-    total = gray.shape[0] * gray.shape[1]
-    regions = []
-    for i in range(1, n):
-        x, y, w, h, area = stats[i]
-        if area < min_area or (w * h) / total > 0.95:
-            continue
-        sel = labels[y:y + h, x:x + w] == i
-        regions.append({
-            "box": [int(x), int(y), int(w), int(h)],
-            "area": int(area),
-            "energy": round(float(anom[y:y + h, x:x + w][sel].mean()), 3),
-        })
-    regions.sort(key=lambda r: -r["area"])
-    return regions, anom
+    picked, emap = localize_ex(gray, cfg, scorer=scorer)
+    return [
+        {
+            "box": [c.x, c.y, c.w, c.h],
+            "area": int(c.w * c.h),
+            "energy": round(float(c.energy), 3),
+            "score": round(float(c.score), 4),
+            "var_factor": round(float(c.var_factor), 3),
+        }
+        for c in picked
+    ], emap
 
 
 def analyze(image, model=None):
@@ -116,7 +138,7 @@ def analyze(image, model=None):
     feats = np.asarray(describe(gray), dtype=np.float64)
     pred = model.predict_one(feats)
 
-    regions, anom = localize(gray)
+    regions, anom = localize(gray, cfg=LOCALIZE_CONFIG, scorer=get_scorer())
     h, w = gray.shape
     return {
         "opencv_version": cv2.__version__,

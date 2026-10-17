@@ -28,10 +28,21 @@ Selection is greedy non-maximum suppression by IoU, capped at `top_k`. NEU
 averages 2.32 defects per image, so emitting more than a handful of boxes is
 what destroyed precision in the previous version.
 
-Deliberately unsupervised. There is no learned scorer here because fitting one
-on this dataset means fitting and reporting on the same 1800 photographs, which
-is exactly the leak documented as Leak 1. Unsupervised selection cannot leak,
-because it never sees a label.
+**Selection is now learned, not hand-weighted.** The unsupervised score above
+could not exploit the proposal space: against an oracle of 0.3455 it reached only
+0.21, because choosing 1 good box out of ~78 needs supervision. `ProposalScorer`
+is a binary logistic regression trained on the TUNE split only and reported once
+on a disjoint REPORT split, so it cannot leak the way a scorer fitted and scored
+on the same images would (Leak 1). The hand-weighted terms above are retained as
+the fallback path used when no scorer is supplied.
+
+**And box size is now part of the search.** A second diagnosis
+(`eval/diagnose_proposals.py`) found that 62.3% of missed ground-truth boxes were
+the right defect at the wrong *size*, and only 2.6% were unseen - so the ceiling
+was geometry, not detection. `add_variants` therefore grows and shrinks every
+component about its anomaly centroid. See that function and docs/EVALUATION.md
+section 4d for the measured effect (oracle 0.346 -> 0.546) and, equally
+important, for why choosing the size with a label-free rule fails.
 """
 from dataclasses import dataclass
 from pathlib import Path
@@ -56,6 +67,11 @@ class ProposalConfig:
     close_k: int = 5
     min_area: int = 20
     max_frac: float = 0.95
+
+    # Nested box variants. Empty by default so the pre-variant behaviour - and
+    # every number measured before this change - stays exactly reproducible.
+    # See `add_variants` for why growing/shrinking is the right fix.
+    variant_factors: tuple = ()
 
     # Selection
     nms_iou: float = 0.40
@@ -89,6 +105,12 @@ class Candidate:
     score: float = 0.0
     n_scales: int = 0
 
+    # Variant geometry. `var_factor` is 1.0 for a raw connected-component box.
+    # `outside_mass` is the share of nearby anomaly energy sitting just OUTSIDE
+    # the box, which is the signal for "this box is a fragment, grow it".
+    var_factor: float = 1.0
+    outside_mass: float = 0.0
+
     def as_box(self):
         return (self.x, self.y, self.w, self.h)
 
@@ -100,6 +122,12 @@ SCORER_FEATURES = (
     "energy", "agree", "compact", "share", "contrast", "n_scales",
     "log_w", "log_h", "log_area", "log_aspect", "area_frac",
     "offx", "offy", "share_rank", "energy_rank",
+    # Size-decision features, added after eval/diagnose_proposals.py showed 62.3%
+    # of ground-truth boxes were "refinement" misses - a proposal overlapping the
+    # defect at the wrong size - and only 2.6% were unseen. A linear model cannot
+    # represent "grow this box *because* there is anomaly just outside it", so the
+    # interaction is supplied explicitly as `grow_interaction`.
+    "var_log", "outside_mass", "grow_interaction",
 )
 SCORER_LEN = len(SCORER_FEATURES)
 
@@ -114,18 +142,24 @@ def candidate_matrix(cands, shape):
     energies = np.array([c.energy for c in cands])
     share_rank = np.argsort(np.argsort(-shares)) / max(1, len(cands) - 1)
     energy_rank = np.argsort(np.argsort(-energies)) / max(1, len(cands) - 1)
+    # Normalise by the scales actually used in THIS image rather than a literal,
+    # so changing ProposalConfig.blur_sizes or thresholds cannot silently
+    # rescale this feature.
+    n_scale_norm = max(1.0, float(max(c.n_scales for c in cands)))
 
     rows = []
     for i, c in enumerate(cands):
         area = max(1, c.w * c.h)
+        var_log = float(np.log(max(1e-6, c.var_factor)))
         rows.append([
             c.energy, c.agree, c.compact, c.share, c.contrast,
-            c.n_scales / 9.0,
+            c.n_scales / n_scale_norm,
             np.log(max(1, c.w)), np.log(max(1, c.h)), np.log(area),
             np.log(max(1, c.w) / max(1, c.h)),
             area / total,
             (c.x + c.w / 2) / width - 0.5, (c.y + c.h / 2) / height - 0.5,
             share_rank[i], energy_rank[i],
+            var_log, c.outside_mass, var_log * c.outside_mass,
         ])
     return np.asarray(rows, dtype=np.float64)
 
@@ -276,76 +310,229 @@ def propose_all(gray, cfg: ProposalConfig = None):
     return per_scale, energy_map, ref_mean
 
 
-def build_candidates(gray, cfg: ProposalConfig = None):
-    """Propose at every scale and measure each candidate's three features.
+def _integral_maps(energy_map):
+    """Integral images of energy, energy*x and energy*y.
 
-    Returns Candidates whose `energy`, `agree` and `compact` are populated but
-    whose `score` is not yet computed. Proposal generation is the expensive
-    part and does not depend on the scorer weights, so a hyper-parameter search
-    calls this once per image and then re-selects many times over it.
+    Three integral images turn every per-box region statistic this module needs
+    into four array lookups instead of a Python-level slice-and-sum. With
+    variant boxes the candidate count tripled, so the old per-candidate loop was
+    the slowest part of proposal building.
+    """
+    e = energy_map.astype(np.float64)
+    h, w = e.shape
+    xs = np.tile(np.arange(w, dtype=np.float64), (h, 1))
+    ys = np.tile(np.arange(h, dtype=np.float64)[:, None], (1, w))
+    return cv2.integral(e), cv2.integral(e * xs), cv2.integral(e * ys)
+
+
+def _box_sums(ii, boxes):
+    """Sum under each box of an (N,4) array, via an integral image."""
+    if not len(boxes):
+        return np.zeros(0, dtype=np.float64)
+    x0 = boxes[:, 0].astype(np.int64)
+    y0 = boxes[:, 1].astype(np.int64)
+    x1 = x0 + boxes[:, 2].astype(np.int64)
+    y1 = y0 + boxes[:, 3].astype(np.int64)
+    return ii[y1, x1] - ii[y0, x1] - ii[y1, x0] + ii[y0, x0]
+
+
+def _iou_matrix(a, b):
+    """(N,4) by (M,4) IoU matrix."""
+    if not len(a) or not len(b):
+        return np.zeros((len(a), len(b)), dtype=np.float64)
+    ax1 = a[:, 0].astype(np.float64) + a[:, 2]
+    ay1 = a[:, 1].astype(np.float64) + a[:, 3]
+    bx1 = b[:, 0].astype(np.float64) + b[:, 2]
+    by1 = b[:, 1].astype(np.float64) + b[:, 3]
+    ix0 = np.maximum(a[:, 0:1], b[None, :, 0])
+    iy0 = np.maximum(a[:, 1:2], b[None, :, 1])
+    ix1 = np.minimum(ax1[:, None], bx1[None, :])
+    iy1 = np.minimum(ay1[:, None], by1[None, :])
+    inter = np.clip(ix1 - ix0, 0, None) * np.clip(iy1 - iy0, 0, None)
+    area_a = (a[:, 2] * a[:, 3]).astype(np.float64)[:, None]
+    area_b = (b[:, 2] * b[:, 3]).astype(np.float64)[None, :]
+    union = area_a + area_b - inter
+    return np.where(union > 0, inter / np.maximum(union, 1e-9), 0.0)
+
+
+def add_variants(boxes, factors, energy_map, shape, integral=None):
+    """Nested rectangles grown/shrunk about each box's anomaly centroid.
+
+    Why this exists: `eval/diagnose_proposals.py` bucketed every missed
+    ground-truth box and found 62.3% were "refinement" misses - a proposal
+    already overlapping the defect, just at the wrong size - against only 2.6%
+    that no proposal overlapped at all. So the ceiling was a *geometry* problem,
+    not a detection problem, and more detector families would not have moved it.
+
+    `eval/probe_factors.py` then chose these factors by greedy forward selection
+    on the TUNE half, maximising oracle recall per extra box: oracle recall went
+    0.351 -> 0.489 for 80 -> 240 boxes per image. Grow factors beat shrink
+    factors because the common refinement miss is a component that is a
+    *fragment* of the annotated defect, not a merge of several defects.
+
+    Returns ((N,4) boxes, (N,) factors). Empty when `factors` is empty, which is
+    what keeps the pre-variant behaviour reproducible.
+    """
+    if not len(boxes) or not factors:
+        return np.zeros((0, 4), dtype=np.int32), np.zeros(0, dtype=np.float64)
+    height, width = shape
+    integral = integral or _integral_maps(energy_map)
+    iiE, iiX, iiY = integral
+
+    tot = _box_sums(iiE, boxes)
+    # Anomaly-weighted centroid, falling back to the box centre when a box
+    # contains no energy at all.
+    cx = _box_sums(iiX, boxes) / np.maximum(tot, 1e-6)
+    cy = _box_sums(iiY, boxes) / np.maximum(tot, 1e-6)
+    empty = tot <= 1e-6
+    cx = np.where(empty, boxes[:, 0] + boxes[:, 2] / 2.0, cx)
+    cy = np.where(empty, boxes[:, 1] + boxes[:, 3] / 2.0, cy)
+
+    out_b, out_f = [], []
+    for f in factors:
+        nw = np.maximum(2, np.rint(boxes[:, 2] * f)).astype(np.int64)
+        nh = np.maximum(2, np.rint(boxes[:, 3] * f)).astype(np.int64)
+        x0 = np.rint(cx - nw / 2.0).astype(np.int64)
+        y0 = np.rint(cy - nh / 2.0).astype(np.int64)
+        x0 = np.clip(x0, 0, np.maximum(0, width - 1))
+        y0 = np.clip(y0, 0, np.maximum(0, height - 1))
+        w_ = np.clip(x0 + nw, 1, width) - x0
+        h_ = np.clip(y0 + nh, 1, height) - y0
+        out_b.append(np.stack([x0, y0, np.maximum(1, w_), np.maximum(1, h_)], axis=1))
+        out_f.append(np.full(len(boxes), float(f)))
+    return (np.concatenate(out_b, axis=0).astype(np.int32),
+            np.concatenate(out_f, axis=0))
+
+
+def build_candidates(gray, cfg: ProposalConfig = None, proposals=None):
+    """Propose at every scale, add nested variants, and measure every feature.
+
+    Returns Candidates whose features are populated but whose `score` is not yet
+    computed. Proposal generation does not depend on the scorer weights, so a
+    hyper-parameter search calls this once per image and re-selects many times
+    over it.
+
+    `proposals` optionally supplies an already-computed `propose_all` result, so
+    a caller that needs the anomaly map as well does not pay to build it twice.
     """
     cfg = cfg or ProposalConfig()
     g = gray if gray.ndim == 2 else cv2.cvtColor(gray, cv2.COLOR_BGR2GRAY)
     height, width = g.shape
-    per_scale, energy_map, ref_mean = propose_all(g, cfg)
+    per_scale, energy_map, ref_mean = (
+        proposals if proposals is not None else propose_all(g, cfg))
     ref_total = float(energy_map.sum()) + 1e-6
     ref_std = float(energy_map.std()) + 1e-6
+    emean = float(energy_map.mean())
 
     pool = [b for b in per_scale if len(b)]
     if not pool:
         return []
-    all_boxes = np.concatenate(pool, axis=0)
 
     # Deduplicate identical boxes that several scales proposed.
+    all_boxes = np.concatenate(pool, axis=0)
     _, first_idx = np.unique(all_boxes, axis=0, return_index=True)
-    uniq = all_boxes[np.sort(first_idx)]
+    base = all_boxes[np.sort(first_idx)]
+
+    integral = _integral_maps(energy_map)
+    iiE = integral[0]
+    var_boxes, var_factors = add_variants(
+        base, cfg.variant_factors, energy_map, g.shape, integral)
+    if len(var_boxes):
+        boxes = np.concatenate([base, var_boxes], axis=0)
+        factors = np.concatenate([np.ones(len(base)), var_factors])
+        # Dedupe on box AND factor: the same rectangle at two scales is two
+        # distinct candidates, because `var_factor` is a scorer feature.
+        keys = np.concatenate(
+            [boxes, np.rint(factors[:, None] * 1000).astype(np.int64)], axis=1)
+        _, keep = np.unique(keys, axis=0, return_index=True)
+        keep = np.sort(keep)
+        boxes, factors = boxes[keep], factors[keep]
+    else:
+        boxes, factors = base, np.ones(len(base))
+
+    clipped = np.array([_clip(x, y, w, h, width, height) for x, y, w, h in boxes],
+                       dtype=np.int32)
+    keep = (clipped[:, 2] >= 2) & (clipped[:, 3] >= 2)
+    boxes, factors = clipped[keep], factors[keep]
+    if not len(boxes):
+        return []
+
+    n = len(boxes)
+    areas = np.maximum(1.0, boxes[:, 2] * boxes[:, 3]).astype(np.float64)
+    sums = _box_sums(iiE, boxes)
+    means = sums / areas
+
+    energy = means / ref_mean
+    # Share of the frame's total anomaly captured by this box. A tight box on a
+    # real defect takes a disproportionate slice; a box the size of a third of
+    # the frame cannot score high however strong its mean is.
+    share = sums / ref_total
+    contrast = (means - emean) / ref_std
+
+    # Anomaly energy in a ring just outside the box, relative to the energy
+    # inside it. High means "the defect continues past this edge" - the signal
+    # that a grown variant is the right rectangle. This is the feature that
+    # lets the scorer turn the extra oracle recall into real recall.
+    margin = np.maximum(3.0, 0.25 * np.maximum(boxes[:, 2], boxes[:, 3]))
+    gx0 = np.clip(boxes[:, 0] - margin, 0, width).astype(np.int64)
+    gy0 = np.clip(boxes[:, 1] - margin, 0, height).astype(np.int64)
+    gx1 = np.clip(boxes[:, 0] + boxes[:, 2] + margin, 0, width).astype(np.int64)
+    gy1 = np.clip(boxes[:, 1] + boxes[:, 3] + margin, 0, height).astype(np.int64)
+    grown = np.stack([gx0, gy0, np.maximum(1, gx1 - gx0), np.maximum(1, gy1 - gy0)],
+                     axis=1)
+    ring = np.maximum(0.0, _box_sums(iiE, grown) - sums)
+    outside_mass = ring / (sums + 1e-6)
+
+    # How many DISTINCT scales independently proposed an overlapping box.
+    allb = np.concatenate(pool, axis=0)
+    scale_id = np.concatenate(
+        [np.full(len(b), s, dtype=np.int32) for s, b in enumerate(per_scale)])
+    hit = _iou_matrix(boxes, allb) >= cfg.agree_iou
+    hits = np.zeros((n, len(per_scale)), dtype=bool)
+    for s in range(len(per_scale)):
+        hits[:, s] = hit[:, scale_id == s].any(axis=1)
+    n_hit = hits.sum(axis=1)
+    agree = n_hit / max(1, len(per_scale))
 
     cands = []
-    for bx, by, bw, bh in uniq:
-        x, y, w, h = _clip(bx, by, bw, bh, width, height)
-        if w < 2 or h < 2:
-            continue
-        box = (x, y, w, h)
-
-        energy = float(energy_map[y:y + h, x:x + w].mean()) / ref_mean
-
-        hits = 0
-        for boxes in per_scale:
-            if len(boxes) and _box_iou_vector(boxes, box).max() >= cfg.agree_iou:
-                hits += 1
-        agree = hits / max(1, len(per_scale))
-
+    for i in range(n):
+        x, y, w, h = (int(v) for v in boxes[i])
+        # compact: how much of the box is actually above its own local mean. A
+        # tight solid region scores high; a box around scattered specks does not.
         local = energy_map[y:y + h, x:x + w]
-        active = local > local.mean()
-        compact = float(active.mean())
-
-        # Share of the frame's total anomaly captured by this box. A tight box on
-        # a real defect takes a disproportionate slice; a box the size of a third
-        # of the frame cannot score high however strong its mean is.
-        share = float(local.sum()) / ref_total
-
-        # Mean departure in standard deviations of the frame's anomaly spread.
-        contrast = (float(local.mean()) - float(energy_map.mean())) / ref_std
-
-        cands.append(Candidate(x, y, w, h, energy=energy, agree=agree,
-                               compact=compact, share=share, contrast=contrast,
-                               n_scales=hits))
+        compact = float((local > local.mean()).mean()) if local.size else 0.0
+        cands.append(Candidate(
+            x, y, w, h,
+            energy=float(energy[i]), agree=float(agree[i]), compact=compact,
+            share=float(share[i]), contrast=float(contrast[i]),
+            n_scales=int(n_hit[i]),
+            var_factor=float(factors[i]), outside_mass=float(outside_mass[i])))
     return cands
 
 
-def select(cands, cfg: ProposalConfig = None, top_k=None, scorer=None, shape=None):
+def select(cands, cfg: ProposalConfig = None, top_k=None, scorer=None, shape=None,
+           scores=None):
     """Apply the scorer, suppress overlaps, and return at most `top_k` regions.
 
     When a trained ProposalScorer is supplied its probability replaces the
     hand-weighted sum, because the learned score selects far better out of the
     multi-scale proposal set. Otherwise the unsupervised weights apply.
+
+    `scores` lets a caller supply probabilities it has already computed. The
+    probability does not depend on `top_k` or `nms_iou`, so a sweep over those
+    two only has to pay for the feature matrix once per image instead of once per
+    configuration - which is the difference between a minutes-long sweep and an
+    hours-long one.
     """
     cfg = cfg or ProposalConfig()
     top_k = cfg.top_k if top_k is None else top_k
     if not cands:
         return []
 
-    if scorer is not None:
+    if scores is not None:
+        for c, p in zip(cands, scores):
+            c.score = float(p)
+    elif scorer is not None:
         probs = scorer.score(cands, shape or (200, 200))
         for c, p in zip(cands, probs):
             c.score = float(p)
@@ -391,6 +578,19 @@ def localize(gray, cfg: ProposalConfig = None, top_k=None, scorer=None):
     Greedy NMS in descending score order, so a returned list is ranked by
     confidence and the agent can escalate on the strongest region.
     """
+    picked, _ = localize_ex(gray, cfg, top_k, scorer)
+    return picked
+
+
+def localize_ex(gray, cfg: ProposalConfig = None, top_k=None, scorer=None):
+    """`localize` plus the anomaly energy map.
+
+    The request path needs both the regions and a scalar summary of the frame's
+    anomaly energy, and the energy map is already computed inside proposal
+    generation - returning it avoids recomputing a blur and an absdiff.
+    """
     g = gray if gray.ndim == 2 else cv2.cvtColor(gray, cv2.COLOR_BGR2GRAY)
-    cands = build_candidates(g, cfg)
-    return select(cands, cfg, top_k, scorer=scorer, shape=g.shape)
+    cfg = cfg or ProposalConfig()
+    proposals = propose_all(g, cfg)
+    cands = build_candidates(g, cfg, proposals=proposals)
+    return select(cands, cfg, top_k, scorer=scorer, shape=g.shape), proposals[1]

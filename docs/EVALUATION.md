@@ -30,7 +30,7 @@ Three questions that fail differently:
 |---|---|---|
 | **classification** | which defect is this? | **92.75%** held-out accuracy, macro F1 0.927 |
 | **triage** | should a person look at it? | **0 missed defects**, auto-pass precision **1.000** |
-| **localisation** | where is it? | **macro F1 0.219** at IoU 0.5 on a disjoint hold-out — improved but still weak, stated plainly |
+| **localisation** | where is it? | **macro F1 0.2247** at IoU 0.5 on a disjoint hold-out — barely moved from 0.2200 despite the proposal oracle rising 0.346 → 0.546, stated plainly |
 
 Localisation is reported separately precisely because it is the weakest part.
 Pooling it with classification would hide that.
@@ -202,12 +202,28 @@ check (second opinion now disabled by default, see §4c).
 
 | condition | single-pass | loop | delta | gate refusals | false accepts (of 200 clean) |
 |---|---|---|---|---|---|
-| clean | 0.7000 | 0.7176 | **+0.018** | 0.013 | 2 |
+| clean | 0.7000 | 0.7257 | **+0.026** | 0.013 | 0 |
 | soft focus | 0.7243 | 0.7297 | **+0.005** | 1.000 | 0 |
-| under-exposed | 0.6770 | 0.7068 | **+0.030** | 0.054 | 1 |
-| specular glare | 0.5730 | 0.6405 | **+0.068** | 0.008 | **34** |
-| low contrast | 0.7027 | 0.7162 | **+0.014** | 0.081 | 3 |
-| sensor noise | 0.3108 | 0.2892 | **−0.022** | 0.543 | 0 |
+| under-exposed | 0.6770 | 0.7243 | **+0.047** | 0.054 | 0 |
+| specular glare | 0.5730 | 0.7338 | **+0.161** | 0.008 | **8** |
+| low contrast | 0.7027 | 0.7230 | **+0.020** | 0.081 | 0 |
+| sensor noise | 0.3108 | 0.4838 | **+0.173** | 0.543 | 0 |
+
+Re-measured 2026-10-17 after the multi-scale localiser was wired into the request
+path (§4d, §4e). Single-pass numbers are unchanged to four decimals, which is the
+expected signature: single-pass never consults the localiser. Every **loop**
+number improved, and both false-accept counts the release gate cares about moved
+the right way — **glare 34 → 8**, noise **0 → 0**.
+
+The likely mechanism is the disagreement veto. The new localiser returns more
+regions per image (mean `region_count` on defect images **0.608 → 1.833**,
+measured in `eval/localize_wiring_check.py`), so the veto fires more often and
+routes more classifier errors to a human. **We have not isolated this with a
+dedicated ablation**, so it is stated as the mechanism consistent with the
+measurements, not as a proven cause. Note also that this ablation's metric
+rewards deferral on defects and penalises it on clean surfaces, so a
+change that defers more is not unambiguously an improvement — which is exactly
+why the false-accept column is reported next to it, and why it did not regress.
 
 ### What we retract from our own earlier run
 
@@ -416,20 +432,100 @@ weights are on **box size** (`log_area` +0.71, `log_h` +0.65, `log_w` +0.62) and
 which is exactly the 7.3x over-sizing fault we measured. An unsupervised score
 had no way to express that.
 
-### 4d. What is still wrong, stated plainly
+### 4d. Second diagnosis: the ceiling was box geometry, not detection
 
-- **macro F1 0.219 is still weak.** It is a real improvement on an honest
-  baseline, not a good detector. `crazing` (0.071) and `patches` (0.048) are
-  barely above zero.
-- **The proposal generator is now the bottleneck, not the scorer.** Oracle
-  recall on the same split is **0.3455**; the scorer reaches 0.2102, capturing
-  **60.8%** of what the proposals allow. Its validation AUC is 0.978, so it ranks
-  candidates almost perfectly — there is little left for a better scorer to win.
-  Closing the remaining gap needs better proposals, not a better score.
-- **Not wired into the agent, deliberately.** `backend/app/analysis.py` and
-  `backend/app/agent.py` still call the old `localize()`, so shipped behaviour
-  and reported behaviour are identical. This is a decision, not an oversight,
-  and the reason is a safety one that reading the code makes obvious:
+Added 2026-10-17. The 0.219 above was limited by an oracle of 0.3455, and §4e's
+conclusion that "closing the remaining gap needs better proposals, not a better
+score" was half right, and worth correcting precisely.
+
+`eval/diagnose_proposals.py` buckets every missed ground-truth box by the *best*
+overlapping proposal:
+
+| bucket | definition | share of all GT |
+|---|---|---|
+| **refinement failure** | best IoU 0.1–0.5 — a proposal overlaps the defect, at the wrong size | **62.3%** |
+| **detection failure** | best IoU < 0.1 — nothing overlaps at all | **2.6%** |
+
+So the generator already *saw* 97.4% of defects. It drew the wrong rectangle.
+More detector families would have been wasted effort. The refinement failures are
+bimodal — of them **16.8%** had a proposal >3x too large and **24.2%** <1/3x too
+small — which is why no single "tighten the box" rule can help.
+
+**A negative result, reported rather than buried.** The obvious cheap fix is to
+pick each box's size with a label-free criterion. All three we tried made things
+*worse* (`eval/probe_variant_pick.py`):
+
+| criterion | oracle recall | vs 0.3508 |
+|---|---|---|
+| contrast — `inside_mean − ring_mean` | 0.3180 | **−0.033** |
+| `inside_mean` | 0.2689 | −0.082 |
+| `mass / √area` | 0.3541 | +0.003 |
+| base box + contrast pick | 0.3934 | +0.043 |
+
+The reason is the interesting part: **NEU annotations mark the semantic extent
+of a defect, which does not follow any energy iso-contour.** No function of the
+anomaly map can recover it. Box size has to be learned from labels.
+
+**What we built instead.** Add nested variants of every component, grown and
+shrunk about its anomaly-weighted centroid, and let the learned scorer choose
+(`backend/app/localize.py::add_variants`). `eval/probe_factors.py` chose the
+factors by greedy forward selection on TUNE, maximising oracle recall per extra
+box. It picked **(0.85, 2.1)**: 80 → 240 boxes/image, oracle **0.346 → 0.546**.
+Richer pools raise the oracle further and *lower* F1, so two factors is the
+optimum, not a compromise.
+
+Two details that turned out to matter more than the variants themselves:
+
+- **Sweep the operating point jointly.** `top_k` and `nms_iou` were never swept
+  before — only `score_thresh`. With 3x the candidates the optimum moves from
+  `top_k=3` to `top_k=2`, and precision *rises* (0.224 → 0.253) because fewer,
+  better-ranked boxes are emitted. Most of the apparent win was hiding here.
+- **Give the scorer the size signal.** Three features were added
+  (`SCORER_FEATURES` 15 → 18): `var_log`, `outside_mass` (anomaly energy in a
+  ring just outside the box) and their product `grow_interaction`. A linear model
+  cannot represent "grow this box *because* there is anomaly just outside it", so
+  the interaction is supplied explicitly.
+
+**Result — a clean A/B, both arms REPORT-read once each, identical protocol:**
+
+| arm | boxes/img | oracle | P | R | **macro F1** |
+|---|---|---|---|---|---|
+| baseline, swept operating point | 80 | 0.3455 | 0.224 | 0.209 | 0.2200 |
+| **+ nested variants** | 240 | **0.5455** | 0.253 | 0.197 | **0.2247** |
+
+**+0.0047.** Per class the gain is not uniform: `rolled-in_scale` 0.185 → 0.250,
+`pitted_surface` **0.278 → 0.250 regressed**, `crazing` and `patches` flat.
+
+Two things we are disclosing rather than smoothing over:
+
+- **The TUNE-validation gain was +0.0201 and the held-out gain is +0.0047** — it
+  shrank 3.6x. Most of what looked like a win was overfitting the tuning slice.
+- **The REPORT split was read twice**, once per pre-registered arm, and reported
+  as an ablation. No configuration was *selected* on it. A single-read protocol
+  cannot produce this comparison at all, so we state the deviation instead of
+  hiding it.
+
+The ceiling is no longer the binding constraint in the way §4e said: it is now
+0.5455 and the scorer reaches only 0.1966, capturing **36.0%** of what the
+proposals allow (was 60.8%). **The scorer is the bottleneck again.**
+
+### 4e. What is still wrong, stated plainly
+
+- **macro F1 0.2247 is still weak.** It is a real improvement on an honest
+  baseline, not a good detector. `crazing` (0.061) and `patches` (0.053) are
+  barely above zero, and §4d's `pitted_surface` regression (0.278 → 0.250) is a
+  genuine cost, not noise.
+- **The scorer is the bottleneck again, not the proposal generator.** This
+  inverted in §4d. Oracle recall on the same split is now **0.5455**; the scorer
+  reaches 0.1966, capturing **36.0%** of what the proposals allow (was 60.8% at
+  an oracle of 0.3455). Raising the ceiling bought recall we cannot yet spend,
+  because a 15→18 feature *linear* model is not strong enough to pick 2 boxes out
+  of 240. That is the next thing to try, and it is a modelling problem, not an
+  OpenCV one.
+- **Now wired into the request path, and the gate that blocked it passed.**
+  This bullet used to say "not wired in, deliberately". The reasoning was sound
+  and it is worth keeping, because it set the condition under which the change
+  could be made:
 
   ```python
   # backend/app/agent.py:131
@@ -437,24 +533,37 @@ had no way to express that.
       if loc["region_count"] > 0:      # structure found -> refuse to auto-pass
   ```
 
-  The disagreement veto keys on the **raw count** of anomaly regions, not on
-  their quality. That makes it a *sensitivity* mechanism: any structure at all
-  blocks the pass. The rebuilt localiser is built the opposite way — it
-  suppresses to `top_k=4` and applies a score threshold, deliberately emitting
-  **fewer, tighter, higher-precision** boxes (0.186 → 0.239 precision).
+  The veto keys on the **raw count** of regions, so it is a *sensitivity*
+  mechanism: any structure at all blocks the pass. The rebuilt localiser looked
+  like its opposite — it suppresses to `top_k` and applies a score threshold,
+  emitting **fewer, tighter** boxes. The stated fear was that a precision-oriented
+  detector behind a sensitivity veto would make the agent *more* willing to
+  auto-pass, "the exact direction in which this system has already shipped one
+  real safety bug". The condition set for revisiting it was: re-run
+  `eval/agent_ablation.py` with **`false_accepts` as the release gate**, not an
+  F1 comparison.
 
-  A precision-oriented detector placed behind a sensitivity veto makes the agent
-  *more* willing to auto-pass, which is the exact direction in which this system
-  has already shipped one real safety bug (200/200 false accepts under noise,
-  §4a). Swapping it in would need `eval/agent_ablation.py` re-run with
-  `false accepts` as a release gate, not just an F1 comparison. We did not
-  change a safety path on the strength of an F1 delta 14 days from the deadline.
+  Run on 2026-10-17, the gate passed and the feared direction did not materialise:
 
-  If this is ever revisited, the correct fix is to make the veto key on
-  *localiser confidence* rather than `region_count > 0`, so a better detector
-  tightens the boxes without silently loosening the veto.
+  | release gate | before | after |
+  |---|---|---|
+  | noise false accepts (of 200 clean) | 0 | **0** |
+  | glare false accepts (of 200 clean) | 34 | **8** |
+
+  Both moved the safe way or held, and every one of the six loop accuracies
+  improved (§4f). The premise that the rebuilt localiser was *less* sensitive
+  turned out to be wrong in the way that mattered: the old implementation's
+  `min_area=400` suppressed most components, so the new one returns **3x more**
+  regions per defect image (0.608 → 1.833) and the veto fires more, not less.
+
+  **What we did not do.** We did not re-tune the veto to make the numbers look
+  better, and we did not touch `PASS_MIN`. The correct future fix is still the
+  one originally identified: make the veto key on *localiser confidence* rather
+  than `region_count > 0`, so a better detector tightens the boxes without
+  silently loosening or silently tightening the veto.
 - **crazing remains near-unsolved** and is the honest weak class. Its oracle
-  recall is only 0.136 — the proposal space itself cannot represent it.
+  recall is only 0.136 at the *baseline* pool — the variant pool lifts the
+  overall oracle to 0.546, but crazing is still the class least helped by it.
 
 ---
 
@@ -462,7 +571,8 @@ had no way to express that.
 
 | limitation | cause | severity |
 |---|---|---|
-| **Localisation F1 0.219** | proposal oracle recall is only 0.346, so no detector can exceed it; crazing (0.071) and patches (0.048) are barely above zero | high — reported, not hidden |
+| **Localisation F1 0.2247** | the *proposals* now reach oracle 0.546 but a linear scorer captures only 36% of them; crazing (0.061) and patches (0.053) are barely above zero, and `pitted_surface` regressed 0.278 → 0.250 when variants were added | high — reported, not hidden |
+| **Localisation costs 3x latency** | the multi-scale proposal generator runs 9 × (blur + threshold + morphology + connectedComponents) instead of 1; `analyze()` 20.5 → 62.3 ms per 200×200 crop (16 img/s) | medium — taken deliberately, measured |
 | **`no_defect` recall 0.790** | only 269 background crops exist (most NEU frames are annotated almost end-to-end), and boxes are imperfect so some crops contain unannotated defect | high — the weakest class |
 | `inclusion` ↔ `pitted_surface` / `scratches` | thin low-contrast streaks are near-identical at 200x200 | medium |
 | No video, no camera geometry | static 200x200 crops only | medium |

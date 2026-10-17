@@ -1,0 +1,51 @@
+{
+  "split": "TUNE half only (even indices)",
+  "images_per_class": 20,
+  "iou_threshold": 0.5,
+  "box_budget": 280,
+  "grid": [
+    0.35,
+    0.45,
+    0.55,
+    0.65,
+    0.75,
+    0.85,
+    1.15,
+    1.4,
+    1.7,
+    2.1
+  ],
+  "selected_factors": [
+    2.1,
+    0.85
+  ],
+  "base_oracle": 0.3508,
+  "selected_oracle": 0.4885,
+  "base_boxes_per_image": 80.2,
+  "selected_boxes_per_image": 239.9,
+  "trace": [
+    {
+      "factors": [
+        2.1
+      ],
+      "oracle": 0.4656,
+      "boxes": 160.3
+    },
+    {
+      "factors": [
+        2.1,
+        0.85
+      ],
+      "oracle": 0.4885,
+      "boxes": 239.9
+    }
+  ],
+  "per_class_oracle": {
+    "crazing": 0.2778,
+    "inclusion": 0.7353,
+    "patches": 0.2364,
+    "pitted_surface": 0.3947,
+    "rolled-in_scale": 0.4667,
+    "scratches": 0.7778
+  }
+}

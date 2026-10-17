@@ -36,6 +36,14 @@ def check(label, actual, expected, tol=0.0):
         FAILURES.append(f"{label}: report says {expected}, artifact says {actual}")
 
 
+def check_str(label, actual, expected):
+    """Equality for non-numeric claims (config values read back as strings)."""
+    ok = actual == expected
+    print(f"  {'OK ' if ok else 'FAIL'}  {label:<52} {actual}")
+    if not ok:
+        FAILURES.append(f"{label}: expected {expected!r}, artifact says {actual!r}")
+
+
 def main():
     print("C1-C2  classifier")
     acc = load("eval/classifier_metrics.json", "held_out_accuracy")
@@ -66,12 +74,12 @@ def main():
     print("C7-C8  ablation")
     ab = json.loads((ROOT / "eval" / "agent_ablation.json").read_text())
     cond = {r["preset"]: r for r in ab["conditions"]}
-    for preset, single, loop in (("clean", 0.7000, 0.7176),
+    for preset, single, loop in (("clean", 0.7000, 0.7257),
                                  ("soft_focus", 0.7243, 0.7297),
-                                 ("under_exposed", 0.6770, 0.7068),
-                                 ("specular_glare", 0.5730, 0.6405),
-                                 ("low_contrast", 0.7027, 0.7162),
-                                 ("sensor_noise", 0.3108, 0.2892)):
+                                 ("under_exposed", 0.6770, 0.7243),
+                                 ("specular_glare", 0.5730, 0.7338),
+                                 ("low_contrast", 0.7027, 0.7230),
+                                 ("sensor_noise", 0.3108, 0.4838)):
         r = cond.get(preset, {})
         check(f"{preset} single-pass", r.get("single_pass_accuracy"), single, 5e-4)
         check(f"{preset} loop", r.get("loop_accuracy"), loop, 5e-4)
@@ -79,9 +87,55 @@ def main():
     check("noise false accepts single-pass", sn.get("false_accepts_single_pass"), 200)
     check("noise false accepts loop", sn.get("false_accepts_loop"), 0)
     sg = cond.get("specular_glare", {})
-    check("glare false accepts loop", sg.get("false_accepts_loop"), 34)
+    check("glare false accepts loop", sg.get("false_accepts_loop"), 8)
     check("glare gate refusal rate", sg.get("gate_refusal_rate"), 0.0081, 5e-4)
     check("soft_focus gate refusal rate", cond["soft_focus"].get("gate_refusal_rate"), 1.0, 1e-9)
+    # The release gate for wiring the localiser in: loop must not lose to
+    # single-pass in any condition, and false accepts must not rise.
+    check("loop wins in all 6 conditions",
+          sum(1 for p in cond
+              if cond[p]["loop_accuracy"] > cond[p]["single_pass_accuracy"]), 6)
+
+    print("C11  localisation (was unchecked until 2026-10-17)")
+    # Localisation was the one headline metric no assertion covered, which is how
+    # a number measured on a module that was not wired into the request path sat
+    # in the README unchallenged. Both arms of the A/B are asserted here so the
+    # comparison in the report cannot drift from the artifacts.
+    loc = load("eval/scorer_results.json")
+    if loc:
+        check("localisation macro F1 (variant arm)", loc["holdout"]["macro_f1"], 0.2247, 5e-4)
+        check("localisation precision", loc["holdout"]["precision"], 0.2527, 5e-4)
+        check("localisation recall", loc["holdout"]["recall"], 0.1966, 5e-4)
+        check("proposal oracle recall", loc["oracle_recall_on_report"], 0.5455, 5e-4)
+        check_str("variant factors",
+                  ",".join(str(v) for v in loc["variant_factors"]), "0.85,2.1")
+        check("operating top_k", loc["holdout_top_k"], 2)
+        check("operating nms_iou", loc["holdout_nms_iou"], 0.3, 1e-9)
+        check("scorer feature count", loc["scorer_len"], 18)
+    base = load("eval/scorer_results_BASELINE_swept.json")
+    if base:
+        check("localisation macro F1 (baseline arm)", base["holdout"]["macro_f1"], 0.2200, 5e-4)
+        check("baseline oracle recall", base["oracle_recall_on_report"], 0.3455, 5e-4)
+    diag = load("eval/proposal_diagnosis.json", "totals")
+    if isinstance(diag, dict):
+        n = max(1, diag.get("gt", 1))
+        check("misses that were refinement (not detection)",
+              round(diag.get("refine", 0) / n, 4), 0.6229, 5e-4)
+
+    print("C12  wiring: is the measured localiser the one that runs?")
+    # Guards the exact regression found on 2026-10-17: a module measured and
+    # reported but never imported by the request path.
+    try:
+        import inspect
+
+        from backend.app import analysis as _an
+        src = inspect.getsource(_an)
+        check("analysis.py imports the measured localiser",
+              1 if "from .localize import" in src else 0, 1)
+        check("analysis.py still defines the old single-threshold body",
+              1 if "connectedComponentsWithStats" in src else 0, 0)
+    except Exception as exc:  # noqa: BLE001
+        FAILURES.append(f"wiring check could not run: {exc}")
 
     print("C9  COOL A/B")
     bench = load("bench/results/comparison-us-east-1.json")

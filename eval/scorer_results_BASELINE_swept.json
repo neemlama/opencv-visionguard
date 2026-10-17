@@ -1,0 +1,102 @@
+{
+  "dataset": "NEU-DET",
+  "iou_threshold": 0.5,
+  "scorer_features": [
+    "energy",
+    "agree",
+    "compact",
+    "share",
+    "contrast",
+    "n_scales",
+    "log_w",
+    "log_h",
+    "log_area",
+    "log_aspect",
+    "area_frac",
+    "offx",
+    "offy",
+    "share_rank",
+    "energy_rank",
+    "var_log",
+    "outside_mass",
+    "grow_interaction"
+  ],
+  "scorer_len": 18,
+  "split": {
+    "tune_per_class": 120,
+    "report_per_class": 200,
+    "overlap": 0,
+    "note": "labels from TUNE only; all reported numbers from REPORT"
+  },
+  "tune_candidates": 53845,
+  "tune_positive_rate": 0.0254,
+  "pos_weight": 6.0,
+  "feature_weights": {
+    "energy": -0.288,
+    "agree": 0.1455,
+    "compact": -0.5953,
+    "share": 0.1117,
+    "contrast": 0.9523,
+    "n_scales": 0.1947,
+    "log_w": 0.7496,
+    "log_h": 0.8127,
+    "log_area": 0.8725,
+    "log_aspect": -0.1255,
+    "area_frac": -0.5659,
+    "offx": 0.0795,
+    "offy": -0.0942,
+    "share_rank": -0.1295,
+    "energy_rank": -0.2493,
+    "var_log": 0.0,
+    "outside_mass": -0.1119,
+    "grow_interaction": 0.0
+  },
+  "holdout_score_thresh": 0.3,
+  "holdout_top_k": 3,
+  "holdout_nms_iou": 0.4,
+  "variant_factors": [],
+  "score_thresh_selected_on": "TUNE validation slice (every 4th TUNE image, stride 3)",
+  "holdout": {
+    "macro_f1": 0.22,
+    "pooled_f1": 0.2161,
+    "precision": 0.224,
+    "recall": 0.2088,
+    "tp": 429,
+    "fp": 1486,
+    "fn": 1626,
+    "per_class": {
+      "crazing": {
+        "precision": 0.0664,
+        "recall": 0.0554,
+        "f1": 0.0604
+      },
+      "inclusion": {
+        "precision": 0.3438,
+        "recall": 0.2529,
+        "f1": 0.2914
+      },
+      "patches": {
+        "precision": 0.0577,
+        "recall": 0.0519,
+        "f1": 0.0547
+      },
+      "pitted_surface": {
+        "precision": 0.2903,
+        "recall": 0.2669,
+        "f1": 0.2781
+      },
+      "rolled-in_scale": {
+        "precision": 0.1804,
+        "recall": 0.1897,
+        "f1": 0.185
+      },
+      "scratches": {
+        "precision": 0.4057,
+        "recall": 0.5065,
+        "f1": 0.4505
+      }
+    }
+  },
+  "oracle_recall_on_report": 0.3455,
+  "scorer_fraction_of_oracle": 0.6043
+}

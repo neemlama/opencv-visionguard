@@ -41,7 +41,7 @@ survey, so both are deduplicated and the split is grouped by source image
 | auto-escalate rate | 38.0% of defects closed without a human |
 | clean surfaces released automatically | 54.3% |
 | confidence calibration, ECE on test | **0.0338** (temperature fitted on validation) |
-| **agent loop vs single-pass** | better in **all 6** capture conditions; **+0.157** on glare |
+| **agent loop vs single-pass** | better in **all 6** capture conditions; **+0.161** on glare, **+0.173** on sensor noise |
 | false accepts under sensor noise | **0 of 200** (was 196 before the noise gate) |
 | throughput, Gabor bank 16→8 | **1.83x** end-to-end on AWS, −0.33 accuracy pts |
 | COOL vs stock OpenCV 5, library-only | **0.94x — COOL slower** |
@@ -98,11 +98,16 @@ eligible when the live API runs pip OpenCV 5 rather than COOL. Draft email:
 | `backend/app/features.py` | OpenCV 5 descriptor: 8 Gabor, Sobel, blur/anomaly, Laplacian |
 | `backend/app/classifier.py` | NumPy logistic regression + temperature scaling |
 | `backend/app/analysis.py` | perception: quality gate, classification, localisation |
-| `backend/app/localize.py` | multi-scale proposal generator + learned proposal scorer |
+| `backend/app/localize.py` | multi-scale proposal generator, nested box variants, learned proposal scorer |
 | `backend/app/agent.py` | decision loop, confidence bands, bounded retries |
 | `backend/app/capture.py` | capture-settings simulator (fixes change the render) |
 | `backend/app/model.npz` | trained weights + fitted temperature |
 | `bench/bench.py`, `aws/run_bench.py` | 3-arm COOL benchmark on AWS Graviton4 |
+| `eval/diagnose_proposals.py` | buckets every missed box: wrong size vs never seen |
+| `eval/probe_factors.py` | greedy factor selection for the nested box pool |
+| `eval/probe_variant_pick.py` | the label-free box-size criteria that failed |
+| `eval/localize_wiring_check.py` | old vs new localiser, end-to-end through the agent |
+| `eval/verify_report_claims.py` | asserts every number in the report against the artifacts |
 | `eval/` | training, calibration, localisation eval, loop demo |
 | `docs/` | evaluation, benchmark, challenges, cost guard |
 
@@ -113,13 +118,15 @@ each measured on 740 real captures (`eval/agent_ablation.py`):
 
 | mechanism | evidence |
 |---|---|
-| **quality gate** refuses to classify an unusable capture, and names the physical fix | loop beats single-pass in all 6 conditions; **+0.157** on specular glare, **+0.037** on sensor noise |
-| **second opinion** applies a genuinely different perception (CLAHE local-contrast stretch) when confidence < 0.55 | fires 359 times, changes the class 165 times |
-| **disagreement check** — classifier says clean but localisation finds structure — refuses to auto-pass | independent cross-check on the classifier |
+| **quality gate** refuses to classify an unusable capture, and names the physical fix | loop beats single-pass in all 6 conditions; **+0.161** on specular glare, **+0.173** on sensor noise |
+| **second opinion** applies a genuinely different perception (CLAHE local-contrast stretch) when confidence < 0.55 | measured firing 359 times and changing the class 165; **net-negative, so disabled by default** (fires 0 times in the current ablation) |
+| **disagreement check** — classifier says clean but localisation finds structure — refuses to auto-pass | independent cross-check on the classifier; now load-bearing — wiring in the rebuilt localiser took its mean `region_count` on defect images from 0.608 to 1.833, and glare false accepts fell **34 → 8** |
 
 **Reported honestly:** the second opinion changed the class 165 times but
-**corrected 0 errors and introduced 17**. Essentially all the loop's measured
-value comes from the quality gate. We do not claim otherwise.
+**corrected 0 errors and introduced 17**, so it is off unless enabled. The loop's
+measured value comes from the quality gate and the disagreement check. We have
+**not** isolated the veto's contribution with a dedicated ablation — it is the
+mechanism consistent with the measurements, not a proven cause.
 
 ### Closed-loop demonstration
 
@@ -185,11 +192,18 @@ compile time; it is a documented gap, not an oversight.
 
 Stated up front, quantified in `docs/EVALUATION.md`:
 
-- **Localisation is weak** — box-level IoU 0.5 macro F1 **0.219** on a disjoint
-  hold-out, improved from 0.186 but still weak. The proposal generator's own
-  oracle recall is only 0.346, so no detector can currently exceed it; `crazing`
-  (0.071) and `patches` (0.048) are barely above zero. The classifier carries
-  the decision; localisation is a pointer and an independent cross-check.
+- **Localisation is weak** — box-level IoU 0.5 macro F1 **0.2247** on a disjoint
+  hold-out, against an honest same-protocol baseline of 0.2200. We raised the
+  proposal generator's oracle recall from 0.346 to **0.546** by adding nested box
+  variants, and macro F1 moved **+0.0047**; the scorer captures only 36% of the
+  ceiling, so it is the bottleneck again. `crazing` (0.061) and `patches` (0.053)
+  are barely above zero and `pitted_surface` regressed 0.278 → 0.250. The
+  classifier carries the decision; localisation is a pointer and an independent
+  cross-check. It costs 3x latency (`analyze()` 20.5 → 62.3 ms per crop).
+- **A negative result worth reading**: every label-free rule we tried for
+  choosing a box's size made localisation *worse* (`docs/EVALUATION.md` §4d).
+  NEU annotations mark a defect's semantic extent, which follows no energy
+  iso-contour, so box size has to be learned from labels.
 - **`no_defect` recall is 0.790** and rests on only 269 background crops, because
   most NEU frames have annotations covering nearly the whole image. This is the
   weakest part of the model.

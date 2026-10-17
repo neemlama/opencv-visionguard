@@ -1,0 +1,81 @@
+{
+  "mode": "skip-report (TUNE validation only; REPORT split untouched)",
+  "variant_factors": [
+    0.85,
+    2.1
+  ],
+  "scorer_len": 18,
+  "split": {
+    "tune_per_class": 120,
+    "overlap": 0,
+    "note": "TUNE only - REPORT never read in this run"
+  },
+  "tune_candidates": 160860,
+  "tune_positive_rate": 0.0239,
+  "pos_weight": 6.0,
+  "feature_weights": {
+    "energy": -0.2227,
+    "agree": 0.2283,
+    "compact": -0.5685,
+    "share": 0.0224,
+    "contrast": 0.878,
+    "n_scales": 0.1449,
+    "log_w": 0.772,
+    "log_h": 0.8451,
+    "log_area": 0.8869,
+    "log_aspect": -0.1279,
+    "area_frac": -0.5136,
+    "offx": 0.0429,
+    "offy": -0.0507,
+    "share_rank": -0.1549,
+    "energy_rank": -0.3188,
+    "var_log": -0.2499,
+    "outside_mass": -0.1593,
+    "grow_interaction": 0.2646
+  },
+  "holdout_score_thresh": 0.3,
+  "holdout_top_k": 2,
+  "holdout_nms_iou": 0.3,
+  "tune_validation": {
+    "macro_f1": 0.2685,
+    "pooled_f1": 0.2605,
+    "precision": 0.3009,
+    "recall": 0.2297,
+    "tp": 99,
+    "fp": 230,
+    "fn": 332,
+    "per_class": {
+      "crazing": {
+        "precision": 0.1765,
+        "recall": 0.1233,
+        "f1": 0.1452
+      },
+      "inclusion": {
+        "precision": 0.4211,
+        "recall": 0.2581,
+        "f1": 0.32
+      },
+      "patches": {
+        "precision": 0.1017,
+        "recall": 0.0638,
+        "f1": 0.0784
+      },
+      "pitted_surface": {
+        "precision": 0.2766,
+        "recall": 0.2766,
+        "f1": 0.2766
+      },
+      "rolled-in_scale": {
+        "precision": 0.3636,
+        "recall": 0.2941,
+        "f1": 0.3252
+      },
+      "scratches": {
+        "precision": 0.45,
+        "recall": 0.4821,
+        "f1": 0.4655
+      }
+    }
+  },
+  "tune_validation_oracle_recall": 0.5708
+}

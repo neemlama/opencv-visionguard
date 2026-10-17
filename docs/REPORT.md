@@ -23,7 +23,7 @@ command that reproduces it.
 | C9 | COOL vs stock OpenCV 5, library-only | **0.94x — COOL slower** | `bench/results/comparison-us-east-1.json` |
 | C10 | Graviton price per vCPU vs Intel | **11% cheaper** | `bench/instance_pricing.json` |
 | C11 | Gabor bank 16→8 speedup | **1.83x** end-to-end on AWS, −0.33 acc pts | `docs/BENCHMARK-RESULTS.md` §2 |
-| C12 | Localisation macro F1 at IoU 0.5 | **0.219 — weak**, disjoint hold-out; old ~0.19 withdrawn (Leak 3) | `eval/scorer_results.json` |
+| C12 | Localisation macro F1 at IoU 0.5 | **0.2247 — weak**, disjoint hold-out; same-protocol baseline 0.2200; old ~0.19 withdrawn (Leak 3) | `eval/scorer_results.json` |
 | C13 | Live endpoint | verified on COOL AMI | `docs/DEPLOYMENT.md` |
 
 ---
@@ -198,7 +198,7 @@ then-current split. The same `(0,0)` also tries to allocate 1.8e19 bytes on the
 ### 4.4 Localisation — the weak component, stated plainly
 
 Box-level detection against ground truth at IoU 0.5, reported once on a
-**disjoint 900-image hold-out**, reaches **macro F1 0.219**.
+**disjoint 900-image hold-out**, reaches **macro F1 0.2247**.
 
 An earlier version of this section claimed **≈ 0.19 after a 180-config grid
 search**. That number was measured on the same images the search ran on
@@ -219,11 +219,52 @@ over 2x too large** (median 7.3x in area) against GT boxes whose median area is
 (sibling-box IoU 0.015) — the old assumption that defects were diffuse and
 frame-filling is contradicted for 93% of boxes.
 
-Still true and still the honest position: **0.219 is weak.** The proposal
-generator's oracle is 0.346, so the detector cannot exceed it, and `crazing`
-(0.071) and `patches` (0.048) are barely above zero. The learned scorer reaches
-60.8% of what the proposals allow at validation AUC 0.978, which means the
-remaining headroom is in better proposals, not a better score.
+### 4.4b The ceiling moved and the score barely followed (2026-10-17)
+
+A second diagnosis (`eval/diagnose_proposals.py`) bucketed every missed
+ground-truth box: **62.3% were "refinement" failures** — a proposal already
+overlapping the defect at the wrong *size* — and only **2.6%** were detection
+failures. The generator saw 97.4% of defects and drew the wrong rectangle. So the
+ceiling was a geometry problem, and more detector families would have been wasted
+effort.
+
+We added nested box variants, grown and shrunk about each component's
+anomaly-weighted centroid, with the factors chosen by greedy forward selection on
+TUNE. Proposal **oracle recall rose 0.346 → 0.546**.
+
+| arm (same protocol, REPORT read once each) | oracle | P | R | macro F1 |
+|---|---|---|---|---|
+| baseline | 0.3455 | 0.224 | 0.209 | 0.2200 |
+| **+ nested variants** | **0.5455** | 0.253 | 0.197 | **0.2247** |
+
+**+0.0047, and we report that plainly rather than quoting the 58% oracle gain.**
+Three disclosures:
+
+- On the TUNE validation slice the gain was **+0.0201**. On held-out data it was
+  **+0.0047** — a 3.6x shrinkage. Most of the apparent win was overfitting.
+- `pitted_surface` **regressed** 0.278 → 0.250. The gain is carried almost
+  entirely by `rolled-in_scale` 0.185 → 0.250.
+- The REPORT split was read **twice**, once per pre-registered arm, to produce
+  this table. No configuration was selected on it, but a single-read protocol
+  cannot yield this comparison at all, so we state the deviation.
+
+**A negative result we are publishing rather than burying:** every label-free
+criterion for choosing a box's size made things *worse* — contrast (inside minus
+surrounding) scored 0.3180 against a 0.3508 baseline, `inside_mean` 0.2689. The
+reason matters: NEU annotations mark a defect's **semantic** extent, which follows
+no energy iso-contour. Box size cannot be recovered from the anomaly map and must
+be learned from labels.
+
+The bottleneck has therefore **inverted**: oracle 0.546, scorer reaches 0.1966,
+capturing **36.0%** of the ceiling (was 60.8%). The next real gain is a stronger
+scorer over a larger pool — a modelling problem, not an OpenCV one.
+
+Wiring this into the request path costs **3x latency** (`analyze()` 20.5 → 62.3 ms
+per 200×200 crop, 16 img/s), because the multi-scale generator runs 9 ×
+(blur + threshold + morphology + connectedComponents) instead of 1.
+
+Still true and still the honest position: **0.2247 is weak**, and `crazing`
+(0.061) and `patches` (0.053) remain barely above zero.
 
 We therefore **do not use localisation to decide**. It supplies a coarse pointer
 and — more usefully — an independent signal: when the classifier says clean but
@@ -265,17 +306,27 @@ clean crops. Single-pass = one perception then decide.
 
 | condition | single-pass | loop | delta | gate refusals | false accepts (of 200 clean) |
 |---|---|---|---|---|---|
-| clean | 0.7000 | 0.7176 | **+0.018** | 0.013 | 2 |
+| clean | 0.7000 | 0.7257 | **+0.026** | 0.013 | 0 |
 | soft focus | 0.7243 | 0.7297 | **+0.005** | 1.000 | 0 |
-| under-exposed | 0.6770 | 0.7068 | **+0.030** | 0.054 | 1 |
-| specular glare | 0.5730 | 0.6405 | **+0.068** | 0.008 | **34** |
-| low contrast | 0.7027 | 0.7162 | **+0.014** | 0.081 | 3 |
-| sensor noise | 0.3108 | 0.2892 | **−0.022** | 0.543 | 0 |
+| under-exposed | 0.6770 | 0.7243 | **+0.047** | 0.054 | 0 |
+| specular glare | 0.5730 | 0.7338 | **+0.161** | 0.008 | **8** |
+| low contrast | 0.7027 | 0.7230 | **+0.020** | 0.081 | 0 |
+| sensor noise | 0.3108 | 0.4838 | **+0.173** | 0.543 | 0 |
 
-The loop helps in five of six conditions, most where a capture is not fit to
-judge. It is **slightly harmful under sensor noise** (−0.022) because the gate
-refuses 54% of frames including good ones; false accepts stay at 0/200, so the
-error is over-caution, not unsafety.
+Re-measured 2026-10-17 after the multi-scale localiser was wired into the request
+path. Single-pass is unchanged to four decimals — the expected signature, since
+single-pass never consults the localiser — while every loop number improved. The
+loop now helps in **all six** conditions rather than five, and the condition that
+used to be harmful (sensor noise, −0.022) is the largest gain (**+0.173**).
+
+The disagreement veto is the likely mechanism: the rebuilt localiser returns 3x
+more regions per defect image (mean `region_count` 0.608 → 1.833), so the veto
+fires more often and routes more classifier errors to a human. We have not
+isolated that with a dedicated ablation, so it is the mechanism *consistent with*
+the measurements rather than a proven cause. Because this metric rewards
+deferral on defects and penalises it on clean surfaces, the false-accept column
+is reported alongside it — and it did not regress: **glare 34 → 8**, noise
+**0 → 0**.
 
 ### 5.2a Which degradations the loop can actually fix
 
@@ -317,18 +368,26 @@ artefact of a **miscalibrated gate**: the glare limit had been derived from the
 synthetic glare preset only reaches **0.388**. Any limit low enough to catch the
 synthetic glare also refuses ~14% of good captures.
 
-Recalibrated permissively, the result falls to **+0.068**. A
-`largest-bright-region` feature was tried as a better discriminator and failed:
-clean p99 = 0.324 versus glare p05 = 0.282. Rough, scaled steel has genuinely
-large saturated regions, so specular glare is not separable from legitimate
-bright surface using intensity statistics alone.
+Recalibrated permissively, the result settles to **+0.161** with the rebuilt
+localiser wired in. A `largest-bright-region` feature was tried as a better
+discriminator and failed: clean p99 = 0.324 versus glare p05 = 0.282. Rough,
+scaled steel has genuinely large saturated regions, so specular glare is not
+separable from legitimate bright surface using intensity statistics alone.
+
+The new +0.161 is close to the retracted +0.157 by coincidence of magnitude, not
+because the retracted number came back. It is measured on the **recalibrated**
+gate with the rebuilt localiser wired in, and the false-accept count behind it
+fell from 34 to 8 — a number the old +0.157 was paired with a far worse version
+of. Anyone who remembers the earlier table should treat these as unrelated.
 
 Consequences we accept:
 
 - **Glare detection is not claimed.** It is disabled by default.
-- Under the glare preset the gate does not refuse, and **34 of 200 clean
-  captures are auto-passed**. That is the safety cost, and the clearest argument
-  for building a real glare feature.
+- Under the glare preset the gate still does not refuse, and **8 of 200 clean
+  captures are auto-passed** — down from 34 before the localiser was wired in,
+  because the classifier/localiser disagreement veto now catches a quarter of
+   them. That is the clearest remaining argument for building a real glare
+   feature rather than relying on the veto to absorb it.
 - Under noise the loop over-refuses.
 
 ### 5.4 No LLM planner, and a disabled second opinion
@@ -465,12 +524,15 @@ The full log is `docs/CHALLENGES.md` (C-01 … C-17). The ones a judge should kn
 ### Open limitations
 
 1. **Simulator-derived robustness** (§1). The largest caveat in the project.
-2. **Localisation macro F1 0.219** (up from an honest 0.1855; the previously
-   published ~0.19 was measured on its own tuning set and is withdrawn). Still
-   weak, and capped by a 0.346 proposal oracle. Not used for decisions.
+2. **Localisation macro F1 0.2247** (same-protocol baseline 0.2200; the
+   previously published ~0.19 was measured on its own tuning set and is
+   withdrawn). Still weak. We raised the proposal oracle 0.346 → 0.546 and gained
+   only +0.0047, because a linear scorer captures 36% of the ceiling.
+   `pitted_surface` regressed 0.278 → 0.250. Costs 3x latency on the request
+   path. Not used for decisions.
 3. **`no_defect` recall 0.790** from 269 crops; crops inherit annotation noise.
-4. **Glare detection does not work** and is disabled; 34/200 false accepts
-   under the glare preset.
+4. **Glare detection does not work** and is disabled; 8/200 false accepts
+   under the glare preset (was 34 before the localiser was wired in).
 5. **The gate has no exposure check**, so only 5.4% of under-exposed captures are
    refused and exposure never triggers a recapture (§5.2a).
 6. **Confusions:** `scratches ↔ inclusion` and `inclusion ↔ pitted_surface` —

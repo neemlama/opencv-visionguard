@@ -4,8 +4,8 @@
       "preset": "clean",
       "n": 740,
       "single_pass_accuracy": 0.7,
-      "loop_accuracy": 0.7176,
-      "delta": 0.0176,
+      "loop_accuracy": 0.7257,
+      "delta": 0.0257,
       "second_opinion_fired": 0,
       "second_opinion_rate": 0.0,
       "decision_changed": 0,
@@ -16,8 +16,8 @@
       "gate_refusal_rate": 0.0135,
       "n_clean": 200,
       "false_accepts_single_pass": 2,
-      "false_accepts_loop": 2,
-      "false_accept_rate_loop": 0.01,
+      "false_accepts_loop": 0,
+      "false_accept_rate_loop": 0.0,
       "single_pass_dist": {
         "escalate-human": 70,
         "guess-low-confidence": 139,
@@ -26,8 +26,8 @@
       },
       "loop_dist": {
         "escalate-human": 106,
-        "human-review": 611,
-        "pass": 13,
+        "human-review": 621,
+        "pass": 3,
         "re-capture": 10
       }
     },
@@ -63,8 +63,8 @@
       "preset": "under_exposed",
       "n": 740,
       "single_pass_accuracy": 0.677,
-      "loop_accuracy": 0.7068,
-      "delta": 0.0297,
+      "loop_accuracy": 0.7243,
+      "delta": 0.0473,
       "second_opinion_fired": 0,
       "second_opinion_rate": 0.0,
       "decision_changed": 0,
@@ -75,8 +75,8 @@
       "gate_refusal_rate": 0.0541,
       "n_clean": 200,
       "false_accepts_single_pass": 1,
-      "false_accepts_loop": 1,
-      "false_accept_rate_loop": 0.005,
+      "false_accepts_loop": 0,
+      "false_accept_rate_loop": 0.0,
       "single_pass_dist": {
         "escalate-human": 25,
         "guess-low-confidence": 104,
@@ -85,8 +85,8 @@
       },
       "loop_dist": {
         "escalate-human": 52,
-        "human-review": 629,
-        "pass": 19,
+        "human-review": 644,
+        "pass": 4,
         "re-capture": 40
       }
     },
@@ -94,8 +94,8 @@
       "preset": "specular_glare",
       "n": 740,
       "single_pass_accuracy": 0.573,
-      "loop_accuracy": 0.6405,
-      "delta": 0.0676,
+      "loop_accuracy": 0.7338,
+      "delta": 0.1608,
       "second_opinion_fired": 0,
       "second_opinion_rate": 0.0,
       "decision_changed": 0,
@@ -106,8 +106,8 @@
       "gate_refusal_rate": 0.0081,
       "n_clean": 200,
       "false_accepts_single_pass": 34,
-      "false_accepts_loop": 34,
-      "false_accept_rate_loop": 0.17,
+      "false_accepts_loop": 8,
+      "false_accept_rate_loop": 0.04,
       "single_pass_dist": {
         "escalate-human": 57,
         "guess-low-confidence": 154,
@@ -116,8 +116,8 @@
       },
       "loop_dist": {
         "escalate-human": 54,
-        "human-review": 546,
-        "pass": 134,
+        "human-review": 667,
+        "pass": 13,
         "re-capture": 6
       }
     },
@@ -125,8 +125,8 @@
       "preset": "low_contrast",
       "n": 740,
       "single_pass_accuracy": 0.7027,
-      "loop_accuracy": 0.7162,
-      "delta": 0.0135,
+      "loop_accuracy": 0.723,
+      "delta": 0.0203,
       "second_opinion_fired": 0,
       "second_opinion_rate": 0.0,
       "decision_changed": 0,
@@ -137,8 +137,8 @@
       "gate_refusal_rate": 0.0811,
       "n_clean": 200,
       "false_accepts_single_pass": 3,
-      "false_accepts_loop": 3,
-      "false_accept_rate_loop": 0.015,
+      "false_accepts_loop": 0,
+      "false_accept_rate_loop": 0.0,
       "single_pass_dist": {
         "escalate-human": 62,
         "guess-low-confidence": 142,
@@ -147,8 +147,8 @@
       },
       "loop_dist": {
         "escalate-human": 88,
-        "human-review": 576,
-        "pass": 16,
+        "human-review": 587,
+        "pass": 5,
         "re-capture": 60
       }
     },
@@ -156,8 +156,8 @@
       "preset": "sensor_noise",
       "n": 740,
       "single_pass_accuracy": 0.3108,
-      "loop_accuracy": 0.2892,
-      "delta": -0.0216,
+      "loop_accuracy": 0.4838,
+      "delta": 0.173,
       "second_opinion_fired": 0,
       "second_opinion_rate": 0.0,
       "decision_changed": 0,
@@ -176,8 +176,8 @@
         "pass": 710
       },
       "loop_dist": {
-        "human-review": 12,
-        "pass": 326,
+        "human-review": 156,
+        "pass": 182,
         "re-capture": 402
       }
     }
