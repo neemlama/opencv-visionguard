@@ -508,7 +508,7 @@ retracted.
 
 ## 7. Failure cases and limitations
 
-The full log is `docs/CHALLENGES.md` (C-01 … C-17). The ones a judge should know:
+The full log is `docs/CHALLENGES.md` (C-01 … C-18). The ones a judge should know:
 
 | id | failure | how we caught it | status |
 |---|---|---|---|
@@ -520,6 +520,7 @@ The full log is `docs/CHALLENGES.md` (C-01 … C-17). The ones a judge should kn
 | C-14 | **auto-passed 200/200 clean captures under noise** | writing the ablation | fixed, → 0/200 |
 | C-15 | wrong AWS price, wrong vCPU matching | Price List API | corrected |
 | C-16 | 2.20x speedup did not reproduce | re-measurement | retracted |
+| C-18 | **the demo script promised a human-control path and a recapture the endpoint did not implement** | tracing every shot to code before recording | fixed; 26-check HTTP test added |
 
 ### Open limitations
 

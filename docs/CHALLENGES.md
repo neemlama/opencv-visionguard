@@ -500,3 +500,32 @@ unannotated regions.
 
 **What we learned.** An ablation that produces a suspiciously clean result
 usually has a bug, not a great system.
+
+## C-18 - The demo we planned to record was not the code we shipped
+
+Three days before the deadline we traced every shot in `docs/VIDEO-SCRIPT.md` to
+the code that produces it, instead of assuming the script was accurate.
+
+1. **`approve()` was an echo.** It returned `{"status": "closed", "decided_by":
+   "human"}` for *any* string, including `WO-doesnotexist`, and stored nothing.
+   The shot list called this an audit line. Human control is scored on the
+   Agentic rubric, and a judge can disprove the claim with one request.
+2. **`/inspect/loop` could not recapture over HTTP.** The UI degraded an image
+   and posted the dead JPEG; `run_loop` received no simulator, so it correctly
+   returned `no_capture_device_attached` instead of applying a fix. The beat the
+   script called the main event - "it changes a camera setting and re-renders the
+   scene" - happened only in `eval/demo_loop.py`, in-process, never in the demo.
+3. **The documented fallback trace was stale.** It opened with a CLAHE second
+   opinion, a path disabled by default after it measured net-negative, so the
+   shipped code could no longer produce it. `docs/DEPLOYMENT.md` had called it
+   "captured from the deployed instance".
+
+**Fix.** Work orders are stored records with an audit trail; unknown ids 404 and
+a second decision 409. `/inspect/loop?preset=` rebuilds the simulator server-side
+and returns the re-rendered frame. `eval/smoke_test.py` exercises the whole
+sequence over HTTP (26 checks), and the trace in `docs/DEPLOYMENT.md` was
+regenerated from the current build.
+
+**What we learned.** A demo script is a claim about behaviour. Claims that are
+not executed by a test drift from the code, and the ones you plan to show on
+camera are the worst ones to be wrong about.
