@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 venv/
 .env
+state/
 bench_result*.json
 bench_local*.json
 bench/results/*.json

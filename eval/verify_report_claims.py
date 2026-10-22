@@ -6,11 +6,13 @@ that each claim cites and fails loudly on any mismatch.
     python eval/verify_report_claims.py
 """
 import json
+import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+os.environ.setdefault("FORGESIGHT_PERSIST", "0")  # a check is not a demo
 
 FAILURES = []
 

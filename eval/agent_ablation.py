@@ -24,8 +24,11 @@ rather than only the flattering one.
     python eval/agent_ablation.py
 """
 import json
+import os
 import sys
 from pathlib import Path
+
+os.environ.setdefault("FORGESIGHT_PERSIST", "0")  # a batch run is not a demo
 
 import cv2
 import numpy as np

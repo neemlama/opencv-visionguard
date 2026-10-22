@@ -83,7 +83,7 @@
 </main>
 <script>
 const $=id=>document.getElementById(id);
-let picked=null;
+let picked=null, original=null, currentPreset=null;
 
 fetch('/health').then(r=>r.json()).then(h=>{
   $('tag-cv').textContent=`rolled-steel surface defects · OpenCV ${h.opencv}`;
@@ -96,7 +96,8 @@ fetch('/samples').then(r=>r.json()).then(d=>{
     `<button class="ghost" data-u="${s.url}">${s.label}</button>`).join('');
   $('presets').querySelectorAll('button').forEach(b=>b.onclick=async()=>{
     const blob=await (await fetch(b.dataset.u)).blob();
-    picked=new File([blob],b.textContent+'.jpg',{type:blob.type});
+    original=picked=new File([blob],b.textContent+'.jpg',{type:blob.type});
+    currentPreset=null;
     show(blob); $('run').disabled=false; $('loop').disabled=false;
   });
 });
@@ -106,7 +107,7 @@ fetch('/samples').then(r=>r.json()).then(d=>{
   b.className='ghost'; b.textContent=k.replace(/_/g,' ');
   b.onclick=async()=>{
     if(!picked){alert('pick a sample first');return;}
-    const fd=new FormData(); fd.append('file',picked);
+    const fd=new FormData(); fd.append('file',original||picked);
     const r=await fetch('/capture/degrade?preset='+k,{method:'POST',body:fd});
     const d=await r.json();
     const bin=atob(d.image_jpeg_b64);
@@ -114,6 +115,7 @@ fetch('/samples').then(r=>r.json()).then(d=>{
     for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
     const blob=new Blob([arr],{type:'image/jpeg'});
     picked=new File([blob],'degraded.jpg',{type:'image/jpeg'});
+    currentPreset=k;
     show(blob); $('run').disabled=false; $('loop').disabled=false;
     $('decision-card').innerHTML='<h2>Decision</h2><div class="warnbox">Capture settings degraded: <b>'+
       JSON.stringify(d.settings)+'</b>. Press <b>Run closed loop</b> to watch the agent correct them.</div>';
@@ -161,9 +163,10 @@ async function analyse(){
 }
 
 async function runLoop(){
-  const fd=new FormData(); fd.append('file',picked);
+  const fd=new FormData(); fd.append('file',original||picked);
   $('decision-card').innerHTML='<h2>Decision</h2><div class="muted">running closed loop…</div>';
-  const d=await (await fetch('/inspect/loop',{method:'POST',body:fd})).json();
+  const q=currentPreset?'?preset='+encodeURIComponent(currentPreset):'';
+  const d=await (await fetch('/inspect/loop'+q,{method:'POST',body:fd})).json();
   $('decision-card').innerHTML='<h2>Decision</h2>'+
     `<span class="pill p-${d.final}">${d.final.replace(/-/g,' ')}</span>`+
     kv([['iterations',d.iterations],['human required',d.human_required],
@@ -183,21 +186,26 @@ async function runLoop(){
 }
 
 async function approve(id,ok){
-  const d=await (await fetch(`/approve/${id}?approved=${ok}`)).json();
-  $('approve').innerHTML='<span class="muted">'+JSON.stringify(d)+'</span>';
+  const r=await fetch(`/approve/${id}?approved=${ok}`);
+  const d=await r.json();
+  if(!r.ok){ $('approve').innerHTML='<span class="muted">'+r.status+' '+JSON.stringify(d)+'</span>'; return; }
+  const last=d.audit[d.audit.length-1];
+  $('approve').innerHTML='<span class="muted">'+d.status+' by '+d.decided_by+
+    ' at '+d.decided_at+' · audit '+d.audit.length+' events ('+last.event+')</span>';
 }
 
 $('run').onclick=analyse;
 $('loop').onclick=runLoop;
 $('drop').onclick=()=>$('file').click();
-$('file').onchange=e=>{ if(e.target.files[0]){ picked=e.target.files[0];
+$('file').onchange=e=>{ if(e.target.files[0]){ original=picked=e.target.files[0];
+  currentPreset=null;
   show(picked); $('run').disabled=false; $('loop').disabled=false; } };
 ['dragenter','dragover'].forEach(ev=>$('drop').addEventListener(ev,e=>{
   e.preventDefault(); $('drop').classList.add('hot'); }));
 ['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev,e=>{
   e.preventDefault(); $('drop').classList.remove('hot'); }));
 $('drop').addEventListener('drop',e=>{const f=e.dataTransfer.files[0];
-  if(f){ picked=f; show(f); $('run').disabled=false; $('loop').disabled=false; }});
+  if(f){ original=picked=f; currentPreset=null; show(f); $('run').disabled=false; $('loop').disabled=false; }});
 </script>
 </body>
 </html>

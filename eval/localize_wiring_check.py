@@ -21,7 +21,10 @@ removed a feature rather than added one.
 """
 import argparse
 import json
+import os
 import sys
+
+os.environ.setdefault("FORGESIGHT_PERSIST", "0")  # a batch run is not a demo
 import time
 import xml.etree.ElementTree as ET
 from collections import defaultdict
