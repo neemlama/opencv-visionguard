@@ -24,7 +24,7 @@ command that reproduces it.
 | C10 | Graviton price per vCPU vs Intel | **11% cheaper** | `bench/instance_pricing.json` |
 | C11 | Gabor bank 16→8 speedup | **1.83x** end-to-end on AWS, −0.33 acc pts | `docs/BENCHMARK-RESULTS.md` §2 |
 | C12 | Localisation macro F1 at IoU 0.5 | **0.2247 — weak**, disjoint hold-out; same-protocol baseline 0.2200; old ~0.19 withdrawn (Leak 3) | `eval/scorer_results.json` |
-| C13 | Live endpoint | verified on COOL AMI | `docs/DEPLOYMENT.md` |
+| C13 | Live endpoint | verified on a COOL AMI, API running pip OpenCV 5.0.0 | `docs/DEPLOYMENT.md` |
 
 ---
 
@@ -543,14 +543,17 @@ The full log is `docs/CHALLENGES.md` (C-01 … C-17). The ones a judge should kn
    session-aware split would be the honest next step.
 8. **Single training run.** No seed variance, no cross-validation.
 9. **No video, no camera geometry, no mill tolerance model.**
-10. **Human approval is a stub endpoint**, not a workflow system.
+10. **Human approval is a small state machine, not a workflow system.** Orders
+    persist with an audit trail; an unknown id returns 404 and a second decision
+    returns 409. There are no accounts, roles or signatures.
 
 ---
 
 ## 8. Reproducibility
 
 ```powershell
-aws login
+pip install -r backend\requirements.txt        # pinned, OpenCV 5.0.0.93
+pip install -r backend\requirements-dev.txt    # httpx, for the smoke test
 
 # 1. Datasets are NOT redistributed. See docs/DATASETS.md.
 #    NEU-CLS/NEU-CLS/*.bmp  and  NEU-DET/NEU-DET/{IMAGES,ANNOTATIONS}
@@ -562,6 +565,7 @@ python eval\train_classifier.py --include-background
 
 # 3. Evidence, all offline and free
 python eval\verify_report_claims.py      # checks every number in THIS report
+python eval\smoke_test.py                # 26 HTTP checks: loop, 404/409, limits
 python eval\triage_eval.py               # operating point + calibration
 python eval\neu_eval.py --limit 100      # localisation IoU
 python eval\agent_ablation.py            # loop vs single-pass
@@ -570,6 +574,8 @@ python eval\feature_variants.py          # accuracy vs latency
 python eval\demo_loop.py --image patches_1.jpg --preset specular_glare
 
 # 4. AWS benchmark (~$0.02, auto-terminating)
+pip install -r requirements-tools.txt          # boto3
+aws login
 python aws\instance_pricing.py
 python aws\run_bench.py --region us-east-1 --opencv-version 5.0.0.93 `
     --arm "A=ami-033e481a24f94c8cb:c8g.medium:cool@0.03988" `
@@ -577,7 +583,7 @@ python aws\run_bench.py --region us-east-1 --opencv-version 5.0.0.93 `
     --arm "D=ami-0bec8cef5313300ad:c8g.large@0.07976" `
     --arm "C=ami-0045d7fc2ad003464:c7i.large@0.08925"
 
-# 5. Live endpoint (COOL AMI, Graviton4)
+# 5. Live endpoint (COOL hardware, API runs pip OpenCV 5 - see DEPLOYMENT.md)
 python aws\deploy_endpoint.py up --ttl-hours 4
 python aws\deploy_endpoint.py status
 python aws\deploy_endpoint.py down

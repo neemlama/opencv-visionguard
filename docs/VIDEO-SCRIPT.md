@@ -40,11 +40,14 @@ On screen: one NEU photograph, full frame. No UI clutter yet.
 curl http://<URL>/health
 ```
 
-Narration: *"This is running right now on a COOL Graviton4 instance in AWS.
+Narration: *"This is the demo API, running right now on an AWS Graviton4 instance.
 `/health` returns OpenCV 5.0.0 — the version the competition requires, verified
-at request time rather than claimed in a README."*
+at request time rather than claimed in a README. The COOL measurement is a
+separate, library-only benchmark; I'll come back to it."*
 
 Pause on the `"opencv": "5.0.0"` field. This is a 20-second credibility beat.
+Do **not** say the API is running COOL: it is not, and `docs/DEPLOYMENT.md` says
+so in the first section.
 
 ---
 
@@ -60,15 +63,19 @@ one step. Every other condition is a weaker demonstration.
 4. Hit the loop button. Narrate over it, do not read the JSON:
    > "The quality gate refuses to classify this frame. It doesn't just say no —
    > it names the physical fix: *steady the camera and refocus*. So it changes a
-   > camera setting and **re-renders the scene**. This is not a patched image."
-5. The trace appears. Narrate:
+   > **camera setting** and **re-renders the scene**. This is not a patched image."
+5. Point at the `final capture settings` line: `focus_blur` goes 4.0 to 0.0. The
+   capture image is replaced by the **re-rendered frame**, which visibly
+   sharpens. Narrate:
    > "The next perception is of a genuinely different frame. The agent now
    > classifies, and escalates with a region and a work order."
-6. Open the work order, click approve once, show the audit line.
+6. Open the work order, click approve once, show the audit line — it prints
+   `closed by human at <timestamp> · audit 2 events`. Ask the same order to close
+   twice and it refuses with 409; that is the human control being real.
 
-**Fallback if the demo misbehaves on camera:** this exact trace is captured
-verbatim in `docs/DEPLOYMENT.md` lines 63–78 and runs on the deployed instance.
-Paste it as an overlay rather than re-rolling ten times.
+**Fallback if the demo misbehaves on camera:** the same trace, from the same
+code, is in `docs/DEPLOYMENT.md` §"Closed-loop trace". Paste it as an overlay
+rather than re-rolling ten times.
 
 ---
 
@@ -103,12 +110,14 @@ bound, ≥ 99.44% at 95%, is in the doc. Mention it only if asked.
 This is the most memorable 55 seconds in the video, because it is a negative
 result you volunteered.
 
-> "We ran the 3-arm benchmark on Graviton4. **COOL is 6% slower than stock OpenCV
-> 5 on our workload** — 0.94x. COOL accelerates Canny by 1.57x, but Canny isn't
-> in our hot path; our pipeline is dominated by a Gabor `filter2D`, and COOL
-> leaves it at exactly 1.00x. We could have rewritten our feature bank to flatter
-> COOL. We didn't, because that would have been optimising for the award rather
-> than the product."
+> "We ran the 3-arm benchmark on Graviton4. This is a **library-only** A/B — the
+> benchmark swaps the OpenCV build under the same feature code; the demo API you
+> just saw runs pip OpenCV 5.0.0, so I'm not claiming COOL sits in the request
+> path. **COOL is 6% slower than stock OpenCV 5 on our workload** — 0.94x. COOL
+> accelerates Canny by 1.57x, but Canny isn't in our hot path; our pipeline is
+> dominated by a Gabor `filter2D`, and COOL leaves it at exactly 1.00x. We could
+> have rewritten our feature bank to flatter COOL. We didn't, because that would
+> have been optimising for the award rather than the product."
 
 Then, briefly, the retraction — this is what separates an honest submission:
 
@@ -133,10 +142,12 @@ Never end on your best number. State the real limit.
 > and is off, and there's no LLM planner — it's a measured gate, because we can
 > defend that."
 
-**Timing note (2026-10-17):** this beat grew when the localisation numbers
-changed. It now runs ~45 s against a 35 s slot. Either drop the last paragraph to
-a single line ("Two things are still weak, and we list both in the report") or
-borrow ~10 s from the COOL section at 3:20. Re-time on the recording pass.
+**Timing note (2026-10-22):** the localisation beat runs ~45 s against a 35 s
+slot, and the COOL beat grew by ~6 s when the library-only clarification was
+added. If the total passes 5:00, cut the retraction list at 3:20 to one sentence
+("three earlier claims did not survive re-measurement, and all three are
+withdrawn") before cutting anything from the localisation beat — the localisation
+number is the one a judge is most likely to check. Re-time on the recording pass.
 
 ---
 
@@ -149,11 +160,13 @@ borrow ~10 s from the COOL section at 3:20. Re-time on the recording pass.
 
 ## Shot checklist
 
+- [ ] `python eval/smoke_test.py` is 26/26 **before** recording
 - [ ] `aws sts get-caller-identity` succeeds **before** recording
 - [ ] endpoint `up`, URL loads, `/health` shows 5.0.0
 - [ ] `soft_focus` preset visibly blurs on click
-- [ ] loop converges and shows a work order ID
-- [ ] approve action produces an audit line
+- [ ] loop converges, trace shows the setting change, `focus_blur` ends at 0.0
+- [ ] loop returns a work order ID
+- [ ] approve produces `closed by human at … · audit 2 events`
 - [ ] no file paths with your username visible in the terminal
 - [ ] `/docs` left closed — no accidental tab with credentials
 - [ ] instance terminated afterwards

@@ -86,10 +86,15 @@ bank turned out to be equally accurate we shipped it *because it is better
 product*, and published the trade-off either way. Full tables in
 `docs/BENCHMARK-RESULTS.md`.
 
-**Open question we have asked the organiser:** whether a COOL benchmark is
-eligible when the live API runs pip OpenCV 5 rather than COOL. Draft email:
-`docs/EMAIL-opencv-org.md`. Note we have since found a COOL image carrying
-**OpenCV 5.1**, which may make the question moot — awaiting their reply.
+**What the deployment does not do:** the live API installs pip OpenCV 5.0.0.93 and
+does not load COOL, so COOL is not in the request path and the A/B above is
+library-only. The COOL Award asks that COOL execute the claimed core workload on
+Graviton; the running deployment does not meet that criterion. `Graviton5-COOL-v3`
+(`ami-033e481a24f94c8cb`) carries `libopencv_*.so.5.1.0`, so one deployment could
+satisfy both the OpenCV 5 rule and the COOL criterion — that is a documented
+option, not a claim about what is running. `docs/DEPLOYMENT.md` states this in the
+first section. We asked the organiser the eligibility question and did not build
+the submission around the answer.
 
 ## Structure
 
@@ -108,6 +113,10 @@ eligible when the live API runs pip OpenCV 5 rather than COOL. Draft email:
 | `eval/probe_variant_pick.py` | the label-free box-size criteria that failed |
 | `eval/localize_wiring_check.py` | old vs new localiser, end-to-end through the agent |
 | `eval/verify_report_claims.py` | asserts every number in the report against the artifacts |
+| `eval/smoke_test.py` | 26 HTTP checks: loop, 404/409 on approval, upload limits |
+| `backend/requirements.txt` | runtime pins, including `opencv-python==5.0.0.93` |
+| `backend/requirements-dev.txt` | test-only pins (`httpx`) |
+| `requirements-tools.txt` | `boto3`, for `aws/` only — not needed by the API |
 | `eval/` | training, calibration, localisation eval, loop demo |
 | `docs/` | evaluation, benchmark, challenges, cost guard |
 
@@ -137,25 +146,35 @@ pixel-patch version could not converge — unsharp masking cannot undo blur, so
 the loop requested refocus forever.
 
 ```
-iter 0: class=scratches confidence=0.404 margin=0.138
-   -> classifier not trusted on first look
-   -> second opinion: CLAHE local-contrast stretch, then re-classify
-iter 1: class=crazing confidence=0.874 margin=0.826
-   -> queue human review with region (workorder WO-8cb28f)
+iter 0: sharpness=1.16 glare=0.0 blown=0.0
+   -> capture is not fit to judge - refuse to classify
+   -> recapture with: steady_and_refocus, boost_contrast
+iter 0: applied 'steady_and_refocus' -> focus_blur 4.0 -> 0.0
+   -> capture settings corrected, scene re-rendered
+iter 1: class=inclusion confidence=0.416 regions=2
+   -> queue human review (workorder WO-xxxxxx)
 ```
 
-The UI labels this explicitly as **simulator mode**, and the plain HTTP path
-returns `re-capture` with `reason: no_capture_device_attached` rather than
-faking a fix.
+The UI labels this explicitly as **simulator mode**. Without a preset the plain
+HTTP path returns `re-capture` with `reason: no_capture_device_attached` rather
+than faking a fix; `/inspect/loop?preset=soft_focus` rebuilds the simulator
+server-side, which is what the browser uses.
 
 ## Run it
 
 ```powershell
 cd C:\Users\wecal\Documents\Codes\opencv-visionguard
-pip install opencv-python fastapi "uvicorn[standard]" python-multipart python-pillow
+pip install -r backend\requirements.txt          # pinned; OpenCV 5.0.0.93
 python eval\train_classifier.py --include-background   # writes backend/app/model.npz
 uvicorn backend.app.main:app --port 8000
 # http://localhost:8000  ·  /docs for the API
+```
+
+Test it (the same route sequence the video demonstrates, over HTTP):
+
+```powershell
+pip install -r backend\requirements-dev.txt
+python eval\smoke_test.py                        # 26 checks, exits 0
 ```
 
 Evidence, no AWS needed:
@@ -165,11 +184,13 @@ python eval\train_classifier.py --include-background   # accuracy + confusion ma
 python eval\triage_eval.py                            # operating-point calibration
 python eval\neu_eval.py --limit 100                   # localisation, IoU per class
 python eval\demo_loop.py                              # closed-loop traces
+python eval\verify_report_claims.py                   # every number in the report
 ```
 
 AWS benchmark (~`$0.015`, auto-terminating):
 
 ```powershell
+pip install -r requirements-tools.txt             # boto3, for aws/ only
 aws login
 python aws\run_bench.py --region us-east-1 `
     --arm "B=ami-0bec8cef5313300ad:c8g.medium" `
@@ -211,19 +232,30 @@ Stated up front, quantified in `docs/EVALUATION.md`:
   confusions — thin linear features.
 - No real production line: single flat 200x200 steel crops, no video, no camera
   geometry, no mill tolerance model.
-- Human approval is a stub endpoint, not a workflow system.
+- Human approval is real state now — orders persist to `state/workorders.json`
+  (`/var/lib/forgesight` on the instance), unknown ids 404 and a second decision
+  409 — but there is no user accounts, no roles, and no signature.
+- **The public endpoint is unauthenticated.** It caps upload size and image
+  dimensions and logs one line per request, and that is the whole of its
+  hardening. It is a demo, not a production control system; do not send it
+  confidential images.
 
 ## Submission checklist
 
 - [x] OpenCV 5 substantive image analysis, live-checked via `/health`
 - [x] agent trace where vision evidence changes the next action
+- [x] human control that is a state machine, not an echo — unknown ids 404,
+      second decisions 409, audit trail persisted
+- [x] pinned dependencies (`backend/requirements.txt`) and a test that exercises
+      them over HTTP (`eval/smoke_test.py`, 26 checks)
 - [x] real public dataset, held-out metrics, confusion matrix, calibration
 - [x] 3-arm reproducible COOL benchmark on Graviton4
 - [x] failure cases and limitations documented (`docs/CHALLENGES.md`)
 - [x] closed capture loop (fix changes settings, scene re-rendered)
-- [x] AWS-hosted demo endpoint — deployed and verified on the COOL Graviton4 AMI,
-      `/health` reporting OpenCV 5.0.0 (`docs/DEPLOYMENT.md`). Held on-demand for
-      cost; `up` brings it back in ~3 min. **Must be up on submission day.**
+- [x] AWS-hosted demo endpoint — deployed on a COOL Graviton4 AMI but running pip
+      OpenCV 5.0.0.93, `/health` reporting 5.0.0 (`docs/DEPLOYMENT.md` says what
+      that does and does not claim). Held on-demand for cost; `up` brings it back
+      in ~3 min. **Must be up on submission day.**
 - [x] architecture diagram (`docs/architecture.png`, source `docs/architecture-eraser.json`)
 - [x] technical report (`docs/REPORT.md`)
 - [ ] <=5 min video — script, shot list and pre-flight in `docs/VIDEO-SCRIPT.md`

@@ -577,7 +577,7 @@ proposals allow (was 60.8%). **The scorer is the bottleneck again.**
 | `inclusion` ↔ `pitted_surface` / `scratches` | thin low-contrast streaks are near-identical at 200x200 | medium |
 | No video, no camera geometry | static 200x200 crops only | medium |
 | No mill tolerance model | outputs a defect class and a region, not a pass/fail against a spec | medium |
-| Human approval is a stub | endpoint + log, not a workflow system | low |
+| Human approval is a small state machine | orders persist with an audit trail; unknown ids 404 and a second decision 409. No accounts, roles or signatures | low |
 | COOL gives no speedup on this pipeline | `gabor_filter2D_x16` is 82% of runtime and COOL does not accelerate it | see `docs/BENCHMARK-RESULTS.md` |
 
 ### Not adversarial

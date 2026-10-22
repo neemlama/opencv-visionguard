@@ -1,15 +1,25 @@
 # Deployment — verified on AWS
 
-The demo endpoint and the COOL Award evidence run on the **same instance**: a
-COOL Graviton4 AMI (`c8g.medium`), so the machine judges benchmark is also the
-machine they click.
+The demo endpoint and the COOL benchmark run on the **same machine**: a COOL
+Graviton4 AMI (`c8g.medium`), so the hardware a judge clicks is the hardware the
+A/B was measured on. They do not run the same *library*, and the next section is
+explicit about that.
 
 ## Why the API runs OpenCV 5 while COOL sits on the same box
 
-The competition requires OpenCV 5 for substantive analysis. COOL's images bundle
-OpenCV 4.12 / 4.14. So the deploy installs `opencv-python==5.0.0.93` from pip and
-**deliberately does not export COOL's `LD_LIBRARY_PATH` / `PYTHONPATH`** for the
-service. COOL stays installed at `/opt/cool` and is used by `bench/bench.py`.
+The competition requires OpenCV 5 for substantive analysis. The COOL Award
+requires COOL to execute the claimed core workload. Both can hold in one process
+only if the image carries COOL *and* OpenCV 5. Our COOL images bundle 4.12 / 4.14,
+so the deployed API installs `opencv-python==5.0.0.93` from pip and **deliberately
+does not export COOL's `LD_LIBRARY_PATH` / `PYTHONPATH`** for the service. COOL
+stays installed at `/opt/cool` and is used only by `bench/bench.py`.
+
+Stated plainly: **the deployed API does not execute COOL**, so the A/B in
+`docs/BENCHMARK-RESULTS.md` is a library-only measurement and the COOL Award's
+"COOL executes the claimed core workload" criterion is not met by this deployment.
+`Graviton5-COOL-v3` (`ami-033e481a24f94c8cb`) does carry
+`libopencv_*.so.5.1.0`, so a single deployment could satisfy both; that is not
+what is running, and this document does not claim otherwise.
 
 Verified on the running instance:
 
@@ -56,30 +66,42 @@ Bring it back up on demand any time; the instance is disposable.
 | `/health` external | `{"ok":true,"opencv":"5.0.0", ...}` |
 | `/samples` | 6 labelled NEU images served |
 | `/inspect` on a real NEU photograph | classified, localised, decided |
-| `/inspect/loop` | full multi-step trace (below) |
-| COOL present | `/opt/cool` |
+| `/inspect/loop?preset=soft_focus` | recaptures, re-renders, settles (below) |
+| `/approve/{id}` | 404 on an unknown id, 409 on a second decision |
+| COOL present on disk | `/opt/cool` (benchmark only, not the API runtime) |
 | nginx | 200 on port 80 |
 
-Closed-loop trace captured from the deployed instance:
+Closed-loop trace from the **current build**, 2026-10-22. Reproduce it with
+`python eval/demo_loop.py --image inclusion_1.jpg --preset soft_focus`; the HTTP
+route `/inspect/loop?preset=soft_focus` produces the same trace, and
+`eval/smoke_test.py` asserts that it does. Work-order ids differ per run.
 
 ```
-1. iter 0: class=scratches confidence=0.404 margin=0.138 regions=3
+1. iter 0: sharpness=1.16 glare=0.0 blown=0.0
+   -> capture is not fit to judge - refuse to classify
+   -> recapture with: steady_and_refocus, boost_contrast
+2. iter 0: applied 'steady_and_refocus' -> focus_blur 4.0 -> 0.0
+   -> capture settings corrected, scene re-rendered
+   -> run perception again on the recaptured frame
+3. iter 1: class=inclusion confidence=0.416 margin=0.104 regions=2
    -> capture is usable; trust the classifier if confident enough
-2. iter 0: confidence 0.404 below 0.55
-   -> classifier not trusted on first look
-   -> second opinion: CLAHE local-contrast stretch, then re-classify
-3. iter 0: first look scratches @ 0.404
-   -> apply CLAHE local-contrast stretch and re-analyse the new image
-4. iter 1: class=crazing confidence=0.874 margin=0.826 regions=0
-   -> capture is usable; trust the classifier if confident enough
-5. iter 1: class=crazing conf=0.874
-   -> queue human review with region (workorder WO-8cb28f)
-=> FINAL: human-review  iterations=2  human=True
+   -> predict inclusion at 41.6%
+4. iter 1: confidence 0.416 below 0.55
+   -> classifier not trusted; second opinion disabled by default (net-negative)
+   -> queue human review (workorder WO-xxxxxx)
+5. iter 1: settled on 'human-review'
+=> FINAL: human-review  iterations=2  human=true  final focus_blur=0.0
 ```
 
-The first perception was low-confidence, so the agent took a *different*
-perception and reached a different, much more confident answer. That is the
-Agentic Vision criterion being satisfied, and it is reproducible from the trace.
+The capture is refused, the *camera setting* changes, the scene is rendered
+again from the corrected setting, and the second perception is a different
+frame. That is the Agentic Vision criterion being satisfied, and it is
+reproducible from the trace and from the test.
+
+An earlier version of this block showed a trace whose second step was a CLAHE
+second opinion. That path is disabled by default (`ENABLE_SECOND_OPINION =
+False`, measured net-negative), so the trace could no longer be produced by the
+shipped code. It has been replaced rather than left standing.
 
 ## Operating schedule and cost
 
