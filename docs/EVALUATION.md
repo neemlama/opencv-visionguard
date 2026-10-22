@@ -88,7 +88,7 @@ construction.
 
 | | ECE on TEST |
 |---|---|
-| before scaling | 0.0886 |
+| before scaling | 0.0903 |
 | after scaling (T = 0.75, fitted on val) | **0.0361** |
 
 ### Leak 3 — localisation was tuned on the images it was reported on
@@ -188,7 +188,7 @@ rather than the most aggressive 0.50.
 | 0.95–1.00 | 360 | 0.992 |
 
 Mildly **under**-confident in the mid bands, so `ESCALATE_MIN=0.85` is
-conservative rather than aggressive. ECE on test: 0.0886 → **0.0361** after
+conservative rather than aggressive. ECE on test: 0.0903 → **0.0361** after
 temperature scaling (T = 0.75, fitted on validation).
 
 ---

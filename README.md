@@ -40,7 +40,7 @@ survey, so both are deduplicated and the split is grouped by source image
 | **auto-pass precision** | **1.000** — nothing auto-passed was defective |
 | auto-escalate rate | 38.0% of defects closed without a human |
 | clean surfaces released automatically | 54.3% |
-| confidence calibration, ECE on test | **0.0338** (temperature fitted on validation) |
+| confidence calibration, ECE on test | **0.0361** (temperature fitted on validation; 0.0903 before scaling) |
 | **agent loop vs single-pass** | better in **all 6** capture conditions; **+0.161** on glare, **+0.173** on sensor noise |
 | false accepts under sensor noise | **0 of 200** (was 196 before the noise gate) |
 | throughput, Gabor bank 16→8 | **1.83x** end-to-end on AWS, −0.33 accuracy pts |
@@ -161,6 +161,15 @@ than faking a fix; `/inspect/loop?preset=soft_focus` rebuilds the simulator
 server-side, which is what the browser uses.
 
 ## Run it
+
+Versions, stated rather than implied. The verified results in `eval/*.json` were
+produced on **Python 3.14.5** (Windows, uv-managed venv). The deployed endpoint runs
+**Python 3.12** on Ubuntu 24.04 arm64 (Graviton) — `aws/endpoint.py` installs
+`python3.12`, creates `/opt/venv` from it, and serves the API with that interpreter.
+`/health` reports the OpenCV version the running process actually loaded, so it is
+the authority for a live instance. Library pins in `backend/requirements.txt`
+(OpenCV 5.0.0.93, NumPy 2.5.3, FastAPI 0.141.1) were captured from the interpreter
+that produced the results.
 
 ```powershell
 cd C:\Users\wecal\Documents\Codes\opencv-visionguard

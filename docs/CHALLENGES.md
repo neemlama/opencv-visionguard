@@ -289,7 +289,7 @@ reporting on test.
 
 | | ECE on test |
 |---|---|
-| before | 0.0886 |
+| before | 0.0903 |
 | after (T = 0.75, fitted on val) | **0.0361** |
 
 **What we learned.** "Held-out" is not one thing. A parameter fitted on a split

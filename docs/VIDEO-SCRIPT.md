@@ -153,7 +153,7 @@ Use Ctrl+G to jump, not scrolling: **line 116** (classification) then **line 147
 > **92.75% accuracy on seven classes**, held out.
 > **Zero missed defects out of 540**, and auto-pass precision exactly **1.000** —
 > nothing we released automatically was defective.
-> And confidence is calibrated: **ECE 0.034**, temperature fitted on validation."
+> And confidence is calibrated: **ECE 0.0361**, temperature fitted on validation."
 
 If asked why not report sensitivity 1.0: the rule-of-three lower bound,
 ≥ 99.44% at 95%, is in the doc. Say it only if asked.
