@@ -1,0 +1,3 @@
+# Only the benchmark and deployment scripts in aws/ need these. The API does not:
+# boto3 on the instance would be dead weight.
+boto3==1.43.108

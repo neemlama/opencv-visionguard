@@ -1,0 +1,4 @@
+# Test-only pins. `pip install -r backend/requirements-dev.txt` then
+# `python eval/smoke_test.py`. httpx is what fastapi.testclient needs.
+-r requirements.txt
+httpx==0.28.1

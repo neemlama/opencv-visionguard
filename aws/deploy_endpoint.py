@@ -72,10 +72,12 @@ apt-get install -y -qq python3-venv nginx libgl1 libglib2.0-0t64
 
 python3 -m venv /opt/venv
 /opt/venv/bin/pip install -q --upgrade pip
-/opt/venv/bin/pip install -q opencv-python==5.0.0.93 fastapi "uvicorn[standard]" \
-    python-multipart numpy
 
 mkdir -p /opt/app && tar -xzf /tmp/app.tgz -C /opt/app
+# Install from the pinned file the repository ships, so the versions published in
+# backend/requirements.txt are the versions that actually run. Installing an
+# ad-hoc list here is how the endpoint and the README drifted apart before.
+/opt/venv/bin/pip install -q -r /opt/app/backend/requirements.txt
 
 cat > /etc/systemd/system/forgesight.service <<'UNIT'
 [Unit]
@@ -84,6 +86,9 @@ After=network.target
 [Service]
 WorkingDirectory=/opt/app
 Environment=PYTHONPATH=/opt/app
+# Work orders persist across restarts here (systemd creates and owns the dir).
+Environment=FORGESIGHT_STATE=/var/lib/forgesight
+StateDirectory=forgesight
 # No COOL env here on purpose: the service runs pip OpenCV 5.
 ExecStart=/opt/venv/bin/uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 Restart=always
