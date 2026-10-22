@@ -353,7 +353,7 @@ def cmd_status(args):
     launch = inst["LaunchTime"].replace(tzinfo=timezone.utc)
     hrs = (datetime.now(timezone.utc) - launch).total_seconds() / 3600
     print(f"[endpoint] {inst['InstanceId']} {inst['InstanceType']} {inst['State']['Name']}")
-    print(f"[endpoint] uptime {hrs:.2f}h -> accrued ~${0.072 * hrs:.4f} (+EIP if attached)")
+    print(f"[endpoint] uptime {hrs:.2f}h -> accrued ~${0.03988 * hrs:.4f} (+EIP if attached)")
     print(f"[endpoint] http://{inst.get('PublicIpAddress')}")
 
 

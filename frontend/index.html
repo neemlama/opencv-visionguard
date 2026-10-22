@@ -144,9 +144,11 @@ async function analyse(){
   const fd=new FormData(); fd.append('file',picked);
   const d=await (await fetch('/inspect',{method:'POST',body:fd})).json();
   const a=d.analysis, p=a.prediction, q=a.quality, l=a.localization;
+  const tr=d.decision.trace||[], why=tr.length?tr[tr.length-1]:null;
   $('trace-card').style.display='none';
   $('decision-card').innerHTML='<h2>Decision</h2>'+
     `<span class="pill p-${d.decision.final}">${d.decision.final.replace(/-/g,' ')}</span>`+
+    (why?`<div class="row"><span class="muted">why: ${why.decision} → ${why.action}</span></div>`:'')+
     kv([
       ['predicted class',p.defect_class],
       ['confidence',p.confidence.toFixed(3)],
