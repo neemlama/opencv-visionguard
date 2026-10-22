@@ -18,7 +18,7 @@ command that reproduces it.
 | C4 | Defect sensitivity (95%, rule of three) | **≥ 99.44%** | derived from C3 |
 | C5 | Auto-pass precision | **1.000** | `eval/triage_calibration.json` |
 | C6 | Confidence calibration, ECE on test | **0.0361** | same, `test_ece` |
-| C7 | Agent loop beats single-pass | 5 of 6 conditions, +0.005 to +0.068 | `eval/agent_ablation.json` |
+| C7 | Agent loop beats single-pass | 6 of 6 conditions, +0.005 to +0.173 | `eval/agent_ablation.json` |
 | C8 | False accepts under sensor noise | **0 of 200** (was 200/200) | `eval/agent_ablation.json` |
 | C9 | COOL vs stock OpenCV 5, library-only | **0.94x — COOL slower** | `bench/results/comparison-us-east-1.json` |
 | C10 | Graviton price per vCPU vs Intel | **11% cheaper** | `bench/instance_pricing.json` |

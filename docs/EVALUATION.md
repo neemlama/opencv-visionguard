@@ -234,9 +234,14 @@ all 1800 legitimate captures, `glare_ratio` reaches **0.75** (p99 = 0.561), whil
 our synthetic glare preset only reaches **0.388**. So any limit low enough to
 catch the synthetic glare also refuses roughly 14% of good captures.
 
-Recalibrated permissively (`GLARE_MAX = 0.80`, above the real maximum), the
-glare result falls to **+0.068** — still positive, but a third of what we first
-claimed. We quote the corrected figure.
+Recalibrated permissively (`GLARE_MAX = 0.80`, above the real maximum of 0.754),
+the gate refuses 0.8% of the ablation set and the delta is **+0.161** — reproduced
+from scratch on 2026-10-22 and essentially unchanged from the +0.157 first
+reported. An earlier draft of this section gave +0.068 as the corrected figure;
+that value does not reproduce, and the table in §4 above (+0.161) is the one to
+trust. The recalibration was still necessary for a different reason: at the old
+0.05 limit the gate would have refused roughly 14% of legitimate captures, so the
+miscalibration was real even though it did not inflate this delta.
 
 A `largest-bright-region` feature was tried as a better discriminator and
 **failed**: clean p99 = 0.324 versus glare p05 = 0.282. Rough, scaled steel has

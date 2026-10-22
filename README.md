@@ -164,8 +164,9 @@ server-side, which is what the browser uses.
 
 Versions, stated rather than implied. The verified results in `eval/*.json` were
 produced on **Python 3.14.5** (Windows, uv-managed venv). The deployed endpoint runs
-**Python 3.12** on Ubuntu 24.04 arm64 (Graviton) — `aws/endpoint.py` installs
-`python3.12`, creates `/opt/venv` from it, and serves the API with that interpreter.
+**Python 3.12** on Ubuntu 24.04 arm64 (the COOL Graviton4 AMI) — `aws/deploy_endpoint.py`
+builds `/opt/venv` from the instance's system `python3`, installs
+`backend/requirements.txt` into it, and serves the API with that interpreter.
 `/health` reports the OpenCV version the running process actually loaded, so it is
 the authority for a live instance. Library pins in `backend/requirements.txt`
 (OpenCV 5.0.0.93, NumPy 2.5.3, FastAPI 0.141.1) were captured from the interpreter

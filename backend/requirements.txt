@@ -1,11 +1,12 @@
-# Runtime pins for the API. Regenerated 2026-10-22 from the interpreter that
-# produced the verified results (`python -m pip show`; Python 3.14.5 on Windows),
-# so a judge who installs this file gets the versions the numbers were measured on.
+# Runtime pins for the API and the deployed endpoint. Regenerated 2026-10-22 from
+# the interpreter that produced the verified results (`python -m pip show`; Python
+# 3.14.5 on Windows), so a judge who installs this file gets the versions the
+# numbers were measured on.
 #
-# The deployed endpoint runs Python 3.12 on Ubuntu 24.04 arm64. Its setup script
-# (aws/endpoint.py) installs these packages by name from PyPI without reading this
-# file, so a redeployed instance can resolve different builds. Check /health, which
-# reports the OpenCV version the running process actually loaded.
+# The endpoint installs this same file: aws/deploy_endpoint.py ships the app over
+# SSM and runs `/opt/venv/bin/pip install -r backend/requirements.txt` on the
+# instance, whose system python3 is 3.12 on Ubuntu 24.04 (COOL Graviton4 AMI).
+# /health reports the OpenCV version the running process actually loaded.
 #
 # opencv-python is 5.x on purpose. The competition requires OpenCV 5 as a
 # substantive runtime component; the old 4.12 pin contradicted the requirement the
