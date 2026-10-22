@@ -188,7 +188,7 @@ async function runLoop(){
 }
 
 async function approve(id,ok){
-  const r=await fetch(`/approve/${id}?approved=${ok}`);
+  const r=await fetch(`/approve/${id}?approved=${ok}`,{method:'POST'});
   const d=await r.json();
   if(!r.ok){ $('approve').innerHTML='<span class="muted">'+r.status+' '+JSON.stringify(d)+'</span>'; return; }
   const last=d.audit[d.audit.length-1];
